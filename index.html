@@ -37,6 +37,10 @@ button:hover{background:#4387ff}
 <option value="pulse">PULSE — futuriste</option>
 </select>
 <div id="carInfo">Bonne accélération, bonne maniabilité et boost équilibré.</div>
+<label>Stade</label>
+<select id="stadium"><option value="neon" selected>Neon Arena</option><option value="classic">Classic Green</option><option value="ember">Ember Dome</option></select>
+<label>Ciel</label>
+<select id="sky"><option value="night" selected>Nuit futuriste</option><option value="sunset">Coucher de soleil</option><option value="day">Ciel clair</option></select>
 <label>Équipes</label>
 <select id="teams"><option value="1">1 vs 1</option><option value="2">2 vs 2</option><option value="3">3 vs 3</option></select>
 <label>Difficulté</label>
@@ -53,7 +57,7 @@ button:hover{background:#4387ff}
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
 
 let scene,camera,renderer,clock,ball,cars=[],running=false,ballCam=false;
-let blue=0,orange=0,remaining=300,lastGoal=0,perTeam=1,diff="normal",carType="balanced"; let stadiumScoreTextures=[];
+let blue=0,orange=0,remaining=300,lastGoal=0,perTeam=1,diff="normal",carType="balanced"; let stadiumScoreTextures=[];let stadiumType="neon",skyType="night";
 let voiceLang="fr",commentaryClock=0,lastCommentary=0,lastCarVoice=0;
 const voiceSupported=("speechSynthesis" in window)&&("SpeechSynthesisUtterance" in window);
 function speakMatch(fr,en,forceLang){
@@ -192,17 +196,18 @@ function car(team,ai,index){
  scene.add(g);return g;
 }
 function arena(){
+ const palette={neon:{grass:0x23452f,stripeA:0x2e603d,stripeB:0x285638,wall:0x293e67},classic:{grass:0x347d3d,stripeA:0x3e9147,stripeB:0x2f7137,wall:0x536b5a},ember:{grass:0x3d3431,stripeA:0x61433a,stripeB:0x49362f,wall:0x68402f}}[stadiumType]||{grass:0x23452f,stripeA:0x2e603d,stripeB:0x285638,wall:0x293e67};
  scene.add(new THREE.HemisphereLight(0x9bbcff,0x090b18,2.8));
  const l=new THREE.DirectionalLight(0xffffff,3.2);l.position.set(8,18,7);l.castShadow=true;scene.add(l);
- const floor=new THREE.Mesh(new THREE.BoxGeometry(42,.5,28),mat(0x111b30));floor.position.y=-.25;floor.receiveShadow=true;scene.add(floor);
- const field=new THREE.Mesh(new THREE.PlaneGeometry(40,26),new THREE.MeshStandardMaterial({color:0x23452f,roughness:.9}));
+ const floor=new THREE.Mesh(new THREE.BoxGeometry(42,.5,28),mat(palette.wall));floor.position.y=-.25;floor.receiveShadow=true;scene.add(floor);
+ const field=new THREE.Mesh(new THREE.PlaneGeometry(40,26),new THREE.MeshStandardMaterial({color:palette.grass,roughness:.9}));
  field.rotation.x=-Math.PI/2;field.position.y=.01;field.receiveShadow=true;scene.add(field);
  // Alternating grass bands add depth without changing the playable dimensions.
  for(let i=0;i<10;i++){
-  const stripe=new THREE.Mesh(new THREE.PlaneGeometry(40,2.6),new THREE.MeshStandardMaterial({color:i%2?0x285638:0x2e603d,roughness:1}));
+  const stripe=new THREE.Mesh(new THREE.PlaneGeometry(40,2.6),new THREE.MeshStandardMaterial({color:i%2?palette.stripeB:palette.stripeA,roughness:1}));
   stripe.rotation.x=-Math.PI/2;stripe.position.set(0,.022,-11.7+i*2.6);stripe.receiveShadow=true;scene.add(stripe);
  }
- const wm=mat(0x293e67);
+ const wm=mat(palette.wall);
  // Side walls stay intact; end walls are split to leave a real opening for each goal.
  const wallParts=[
   [0,1,13.8,17.5,3,.5],[-12.25,1,13.8,17.5,3,.5],[12.25,1,13.8,17.5,3,.5],
@@ -457,6 +462,11 @@ function cam(dt){
 }
 function fmt(s){s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
 function loop(){requestAnimationFrame(loop);refreshMobileUI();const dt=Math.min(clock.getDelta(),.033);if(running){remaining-=dt;commentaryVoice(dt);document.querySelector("#timer").textContent=fmt(remaining);cars.forEach((c,i)=>i?ai(c,dt):human(c,dt));ballPhysics(dt);collisions();cam(dt);document.querySelector("#fill").style.width=cars[0].userData.boost+"%";if(remaining<=0){running=false;speakMatch("Fin du match ! Score final : "+blue+" à "+orange+". Merci de jouer !","Full time! Final score: "+blue+" to "+orange+". Thanks for playing!");document.querySelector("#flash").innerHTML="FIN DU MATCH<br><small>"+blue+" — "+orange+"</small>";document.querySelector("#flash").style.display="block";setTimeout(()=>{document.querySelector("#flash").style.display="none";document.querySelector("#menu").style.display="flex";document.querySelector("#score").style.display="none";document.querySelector("#boost").style.display="none";document.querySelector("#help").style.display="none"},2200)}}renderer.render(scene,camera)}
+function applySky(){
+ if(!scene)return;
+ const sky={night:{bg:0x050914,fog:0x050914},sunset:{bg:0x3b1837,fog:0x3b1837},day:{bg:0x73b8e8,fog:0x73b8e8}}[skyType]||{bg:0x050914,fog:0x050914};
+ scene.background=new THREE.Color(sky.bg);scene.fog=new THREE.Fog(sky.fog,35,80);
+}
 function init(){
  scene=new THREE.Scene();scene.background=new THREE.Color(0x050914);scene.fog=new THREE.Fog(0x050914,35,80);
  camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,160);camera.position.set(0,7,15);
@@ -465,8 +475,10 @@ function init(){
  loop()
 }
 document.querySelector("#car").onchange=e=>{carType=e.target.value;document.querySelector("#carInfo").textContent=carInfo[carType]||carInfo.balanced};
+document.querySelector("#stadium").onchange=e=>{stadiumType=e.target.value};
+document.querySelector("#sky").onchange=e=>{skyType=e.target.value;applySky()};
 document.querySelector("#start").onclick=()=>{
- perTeam=+document.querySelector("#teams").value;diff=document.querySelector("#diff").value;remaining=+document.querySelector("#duration").value;if(matchMedia("(pointer: coarse)").matches&&screen.orientation&&screen.orientation.lock){screen.orientation.lock("landscape").catch(()=>{});}
+ perTeam=+document.querySelector("#teams").value;diff=document.querySelector("#diff").value;remaining=+document.querySelector("#duration").value;stadiumType=document.querySelector("#stadium").value;skyType=document.querySelector("#sky").value;applySky();if(matchMedia("(pointer: coarse)").matches&&screen.orientation&&screen.orientation.lock){screen.orientation.lock("landscape").catch(()=>{});}
  blue=orange=0;document.querySelector("#b").textContent=0;document.querySelector("#o").textContent=0;document.querySelector("#menu").style.display="none";document.querySelector("#score").style.display="block";document.querySelector("#boost").style.display="block";document.querySelector("#help").style.display="block";
  [...scene.children].forEach(o=>scene.remove(o));cars=[];arena();makeBall();for(let t=0;t<2;t++)for(let i=0;i<perTeam;i++)cars.push(car(t,!(t==0&&i==0),i));resetBall();running=true;matchStartVoice();refreshMobileUI()
 };
