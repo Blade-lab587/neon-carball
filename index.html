@@ -145,6 +145,11 @@ function car(team,ai,index){
  const body=new THREE.Mesh(new THREE.BoxGeometry(...bodySize),mat(teamColor));body.position.y=.72;body.castShadow=true;g.add(body);
  // Align the visible front with the car's forward direction (+Z).
  const hood=new THREE.Mesh(new THREE.BoxGeometry(bodySize[0]*.84,.22,type==='rampage'?1.18:1.05),mat(accent));hood.position.set(0,.98,1.12);hood.castShadow=true;g.add(hood);
+ // Deux nervures fines donnent du relief au capot sans changer le gabarit de collision.
+ for(const x of [-bodySize[0]*.24,bodySize[0]*.24]){
+  const ridge=new THREE.Mesh(new THREE.BoxGeometry(.045,.025,.78),new THREE.MeshStandardMaterial({color:accent,metalness:.55,roughness:.3,emissive:accent,emissiveIntensity:.12}));
+  ridge.position.set(x,1.105,1.12);g.add(ridge);
+ }
  const frontZ=bodySize[2]/2+.035, rearZ=-bodySize[2]/2-.035;
  const headlightMat=new THREE.MeshStandardMaterial({color:0xeafaff,emissive:0x9eeaff,emissiveIntensity:1.8,metalness:.15,roughness:.2});
  const tailMat=new THREE.MeshStandardMaterial({color:0xff303b,emissive:0x9b0014,emissiveIntensity:1.4,metalness:.1,roughness:.25});
