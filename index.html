@@ -136,13 +136,27 @@ function car(team,ai,index){
  const accent=team?new THREE.Color(modelGlow).offsetHSL(0,-.05,.04).getHex():modelGlow;
  const bodySize={balanced:[2.15,.52,3.45],speed:[2.02,.46,3.7],heavy:[2.45,.62,3.5],phantom:[1.95,.44,3.35],nova:[2.08,.48,3.65],rampage:[2.6,.66,3.55],pulse:[2.12,.5,3.6]}[type]||[2.15,.52,3.45];
  const body=new THREE.Mesh(new THREE.BoxGeometry(...bodySize),mat(teamColor));body.position.y=.72;body.castShadow=true;g.add(body);
- const hood=new THREE.Mesh(new THREE.BoxGeometry(bodySize[0]*.84,.22,type==='rampage'?1.18:1.05),mat(accent));hood.position.set(0,.98,-1.15);hood.castShadow=true;g.add(hood);
+ // Align the visible front with the car's forward direction (+Z).
+ const hood=new THREE.Mesh(new THREE.BoxGeometry(bodySize[0]*.84,.22,type==='rampage'?1.18:1.05),mat(accent));hood.position.set(0,.98,1.12);hood.castShadow=true;g.add(hood);
+ const frontZ=bodySize[2]/2+.035, rearZ=-bodySize[2]/2-.035;
+ const headlightMat=new THREE.MeshStandardMaterial({color:0xeafaff,emissive:0x9eeaff,emissiveIntensity:1.8,metalness:.15,roughness:.2});
+ const tailMat=new THREE.MeshStandardMaterial({color:0xff303b,emissive:0x9b0014,emissiveIntensity:1.4,metalness:.1,roughness:.25});
+ for(const x of [-bodySize[0]*.31,bodySize[0]*.31]){
+  const head=new THREE.Mesh(new THREE.BoxGeometry(.34,.16,.07),headlightMat);head.position.set(x,.82,frontZ);g.add(head);
+  const tail=new THREE.Mesh(new THREE.BoxGeometry(.32,.14,.07),tailMat);tail.position.set(x,.79,rearZ);g.add(tail);
+ }
+ const grille=new THREE.Mesh(new THREE.BoxGeometry(bodySize[0]*.34,.16,.06),new THREE.MeshStandardMaterial({color:0x10151e,metalness:.5,roughness:.65}));grille.position.set(0,.66,frontZ);g.add(grille);
  const cabinW=type==='rampage'?1.42:type==='phantom'?1.18:1.28;
  const cabin=new THREE.Mesh(new THREE.BoxGeometry(cabinW,.5,type==='speed'||type==='nova'?1.45:1.28),new THREE.MeshStandardMaterial({color:0x101728,metalness:.85,roughness:.12}));cabin.position.set(0,1.08,.15);cabin.castShadow=true;g.add(cabin);
  const roof=new THREE.Mesh(new THREE.BoxGeometry(cabinW*.84,.08,type==='speed'||type==='nova'?1.2:1.05),new THREE.MeshBasicMaterial({color:accent}));roof.position.set(0,1.35,.15);g.add(roof);
  const wingW=type==='rampage'?2.85:type==='phantom'?2.2:2.45;
- const wing=new THREE.Mesh(new THREE.BoxGeometry(wingW,.12,type==='speed'?.7:.52),mat(teamColor));wing.position.set(0,type==='heavy'?.9:.84,1.65);wing.castShadow=true;g.add(wing);
- const bumper=new THREE.Mesh(new THREE.BoxGeometry(type==='rampage'?2.25:1.9,type==='rampage'?.28:.18,.25),new THREE.MeshBasicMaterial({color:accent}));bumper.position.set(0,type==='rampage'?.62:.58,-1.76);g.add(bumper);
+ const wing=new THREE.Mesh(new THREE.BoxGeometry(wingW,.12,type==='speed'?.7:.52),mat(teamColor));wing.position.set(0,type==='heavy'?.9:.84,-1.65);wing.castShadow=true;g.add(wing);
+ const bumper=new THREE.Mesh(new THREE.BoxGeometry(type==='rampage'?2.25:1.9,type==='rampage'?.28:.18,.25),new THREE.MeshBasicMaterial({color:accent}));bumper.position.set(0,type==='rampage'?.62:.58,frontZ);g.add(bumper);
+ // Small side mirrors and lower skirts give the chassis a more finished silhouette.
+ for(const side of [-1,1]){
+  const mirror=new THREE.Mesh(new THREE.BoxGeometry(.22,.13,.24),mat(accent));mirror.position.set(side*(bodySize[0]/2+.09),1.02,.42);mirror.castShadow=true;g.add(mirror);
+  const skirt=new THREE.Mesh(new THREE.BoxGeometry(.12,.2,2.25),new THREE.MeshStandardMaterial({color:0x151c2b,metalness:.55,roughness:.42}));skirt.position.set(side*(bodySize[0]/2-.015),.55,0);g.add(skirt);
+ }
  if(type==='rampage'||type==='heavy'){
   const bar=new THREE.Mesh(new THREE.BoxGeometry(bodySize[0]*.95,.18,.22),new THREE.MeshStandardMaterial({color:0x151922,metalness:.8,roughness:.25}));bar.position.set(0,.72,-1.88);bar.castShadow=true;g.add(bar);
  }
@@ -154,13 +168,15 @@ function car(team,ai,index){
  }
  const wheelX=bodySize[0]/2+.02;
  const wheels=[];
+ const rimMat=new THREE.MeshStandardMaterial({color:0x8fa7c9,metalness:.88,roughness:.24});
  for(const x of [-wheelX,wheelX])for(const z of [-1.1,1.15]){
   const r=type==='heavy'||type==='rampage'?.46:type==='phantom'?.38:.42;
   const w=new THREE.Mesh(new THREE.CylinderGeometry(r,r,.32,20),new THREE.MeshStandardMaterial({color:0x05070d,roughness:.8}));
   w.rotation.z=Math.PI/2;w.position.set(x,.47,z);w.castShadow=true;g.add(w);wheels.push(w);
+  const hub=new THREE.Mesh(new THREE.CylinderGeometry(r*.43,r*.43,.035,16),rimMat);hub.rotation.z=Math.PI/2;hub.position.set(x+Math.sign(x)*.17,.47,z);g.add(hub);
  }
  const flame=new THREE.Mesh(new THREE.ConeGeometry(type==='nova'?.27:.22,type==='nova'?1.35:1.15,10),new THREE.MeshBasicMaterial({color:accent,transparent:true,opacity:.9}));
- flame.rotation.x=-Math.PI/2;flame.position.set(0,.55,2.2);flame.visible=false;g.add(flame);
+ flame.rotation.x=-Math.PI/2;flame.position.set(0,.55,-2.2);flame.visible=false;g.add(flame);
  g.userData={team,ai,index,vel:new THREE.Vector3(),yaw:team?Math.PI:0,onGround:true,jumps:0,boost:100,wheels,flame,hitCooldown:0,mass:v.mass,carType:type};
  scene.add(g);return g;
 }
