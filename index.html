@@ -184,17 +184,17 @@ function goal(side){
   q.position.set(x,y,z);q.castShadow=true;scene.add(q);
  }
  const netMat=new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.25,wireframe:true});
- const backZ=z-side*1.9;
+ const backZ=z+side*1.9;
  const back=new THREE.Mesh(new THREE.PlaneGeometry(7,3),netMat);
  back.position.set(0,1.5,backZ);scene.add(back);
  // Side and roof net panels make the goal read as a shallow 3D cage.
  for(const x of [-3.5,3.5]){
   const sideNet=new THREE.Mesh(new THREE.PlaneGeometry(1.9,3),netMat);
-  sideNet.rotation.y=Math.PI/2;sideNet.position.set(x,1.5,z-side*.95);scene.add(sideNet);
+  sideNet.rotation.y=Math.PI/2;sideNet.position.set(x,1.5,z+side*.95);scene.add(sideNet);
  }
  const roof=new THREE.Mesh(new THREE.PlaneGeometry(7,1.9),netMat);
  roof.rotation.x=Math.PI/2;roof.position.set(0,3,z-side*.95);scene.add(roof);
- const glow=new THREE.PointLight(c,1.1,10);glow.position.set(0,1.8,z-side*.8);scene.add(glow);
+ const glow=new THREE.PointLight(c,1.1,10);glow.position.set(0,1.8,z+side*.8);scene.add(glow);
 }
 function makeBall(){
  const group=new THREE.Group();
