@@ -175,10 +175,7 @@ function car(team,ai,index){
  splitter.position.set(0,.49,frontZ-.08);splitter.castShadow=true;g.add(splitter);
  const diffuser=new THREE.Mesh(new THREE.BoxGeometry(bodySize[0]*.72,.09,.32),new THREE.MeshStandardMaterial({color:0x111722,metalness:.8,roughness:.3}));
  diffuser.position.set(0,.49,rearZ+.08);g.add(diffuser);
- for(const x of [-.42,-.14,.14,.42]){
-  const fin=new THREE.Mesh(new THREE.BoxGeometry(.055,.07,.25),new THREE.MeshStandardMaterial({color:0x46536a,metalness:.75,roughness:.3}));
-  fin.position.set(x,.43,rearZ+.1);g.add(fin);
- }
+ // Ailettes arrière retirées à la demande de l'utilisateur.
  // Small side mirrors and lower skirts give the chassis a more finished silhouette.
  for(const side of [-1,1]){
   const mirror=new THREE.Mesh(new THREE.BoxGeometry(.22,.13,.24),mat(accent));mirror.position.set(side*(bodySize[0]/2+.09),1.02,.42);mirror.castShadow=true;g.add(mirror);
