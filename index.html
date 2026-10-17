@@ -186,11 +186,24 @@ function car(team,ai,index){
  const wheelX=bodySize[0]/2+.02;
  const wheels=[];
  const rimMat=new THREE.MeshStandardMaterial({color:0x8fa7c9,metalness:.88,roughness:.24});
+ const spokeMat=new THREE.MeshStandardMaterial({color:0x26344a,metalness:.9,roughness:.28});
  for(const x of [-wheelX,wheelX])for(const z of [-1.1,1.15]){
   const r=type==='heavy'||type==='rampage'?.46:type==='phantom'?.38:.42;
-  const w=new THREE.Mesh(new THREE.CylinderGeometry(r,r,.32,20),new THREE.MeshStandardMaterial({color:0x05070d,roughness:.8}));
-  w.rotation.z=Math.PI/2;w.position.set(x,.47,z);w.castShadow=true;g.add(w);wheels.push(w);
-  const hub=new THREE.Mesh(new THREE.CylinderGeometry(r*.43,r*.43,.035,16),rimMat);hub.rotation.z=Math.PI/2;hub.position.set(x+Math.sign(x)*.17,.47,z);g.add(hub);
+  const wheelGroup=new THREE.Group();wheelGroup.position.set(x,.47,z);g.add(wheelGroup);
+  const w=new THREE.Mesh(new THREE.CylinderGeometry(r,r,.32,24),new THREE.MeshStandardMaterial({color:0x05070d,roughness:.8}));
+  w.rotation.z=Math.PI/2;w.castShadow=true;wheelGroup.add(w);
+  const outer=Math.sign(x)*.175;
+  const hub=new THREE.Mesh(new THREE.CylinderGeometry(r*.43,r*.43,.04,20),rimMat);hub.rotation.z=Math.PI/2;hub.position.x=outer;wheelGroup.add(hub);
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(r*.68,.035,8,20),rimMat);rim.rotation.y=Math.PI/2;rim.position.x=outer+Math.sign(x)*.025;wheelGroup.add(rim);
+  for(let spoke=0;spoke<5;spoke++){
+   const a=spoke*Math.PI*2/5;
+   const bar=new THREE.Mesh(new THREE.BoxGeometry(.035,r*.58,.045),spokeMat);
+   bar.position.set(outer+Math.sign(x)*.035,Math.cos(a)*r*.34,Math.sin(a)*r*.34);
+   bar.rotation.x=-a;wheelGroup.add(bar);
+  }
+  const cap=new THREE.Mesh(new THREE.CylinderGeometry(r*.16,r*.16,.05,12),new THREE.MeshStandardMaterial({color:accent,metalness:.65,roughness:.25}));
+  cap.rotation.z=Math.PI/2;cap.position.x=outer+Math.sign(x)*.045;wheelGroup.add(cap);
+  wheels.push(wheelGroup);
  }
  const flame=new THREE.Mesh(new THREE.ConeGeometry(type==='nova'?.27:.22,type==='nova'?1.35:1.15,10),new THREE.MeshBasicMaterial({color:accent,transparent:true,opacity:.9}));
  flame.rotation.x=-Math.PI/2;flame.position.set(0,.55,-2.2);flame.visible=false;g.add(flame);
