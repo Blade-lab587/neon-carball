@@ -178,41 +178,54 @@ function arena(){
  stadiumDecor();
 }
 function stadiumDecor(){
- // Three compact seating tiers outside the playing walls.
- const standMats=[mat(0x17243c),mat(0x202f4d),mat(0x293a5b)];
+ // Raised sci-fi grandstands: deliberately above the perimeter walls so they stay visible from the gameplay camera.
+ const standMats=[
+  new THREE.MeshStandardMaterial({color:0x17243c,metalness:.45,roughness:.48,emissive:0x07142a,emissiveIntensity:.55}),
+  new THREE.MeshStandardMaterial({color:0x263b5b,metalness:.4,roughness:.42,emissive:0x102747,emissiveIntensity:.7}),
+  new THREE.MeshStandardMaterial({color:0x354b70,metalness:.35,roughness:.4,emissive:0x162e50,emissiveIntensity:.8})
+ ];
+ const blueGlow=new THREE.MeshBasicMaterial({color:0x168cff});
+ const orangeGlow=new THREE.MeshBasicMaterial({color:0xff7022});
+ // Long-side stands: elevated stepped tiers peek clearly over the 3-unit-high arena walls.
  for(const side of [-1,1]){
   for(let row=0;row<3;row++){
-   const seat=new THREE.Mesh(new THREE.BoxGeometry(2.1,.65,25.5),standMats[row]);
-   seat.position.set(side*(22.3+row*2.05),.25+row*.58,0);
-   seat.castShadow=true;seat.receiveShadow=true;scene.add(seat);
-   const trim=new THREE.Mesh(new THREE.BoxGeometry(.08,.12,25.2),new THREE.MeshBasicMaterial({color:row===1?0x168cff:0x42577d}));
-   trim.position.set(side*(21.25+row*2.05),.6+row*.58,0);scene.add(trim);
+   const x=side*(22.0+row*1.75), y=3.15+row*.85;
+   const tier=new THREE.Mesh(new THREE.BoxGeometry(2.0,.8,25.8),standMats[row]);
+   tier.position.set(x,y,0);tier.castShadow=true;tier.receiveShadow=true;scene.add(tier);
+   const lip=new THREE.Mesh(new THREE.BoxGeometry(.09,.13,25.5),side<0?blueGlow:orangeGlow);
+   lip.position.set(x-side*1.0,y-.12,0);scene.add(lip);
+   // Repeated luminous seat blocks create a visible esports-arena seating pattern at low mesh cost.
+   for(let n=0;n<9;n++){
+    const seat=new THREE.Mesh(new THREE.BoxGeometry(1.25,.18,2.15),n%3===0?(side<0?blueGlow:orangeGlow):standMats[2]);
+    seat.position.set(x,y+.48,-10.2+n*2.55);scene.add(seat);
+   }
   }
  }
+ // End stands are also raised above the end walls; leave the goal mouths visually clear.
  for(const side of [-1,1]){
   for(let row=0;row<2;row++){
-   const seat=new THREE.Mesh(new THREE.BoxGeometry(32,.65,1.65),standMats[row+1]);
-   seat.position.set(0,.3+row*.62,side*(16.9+row*1.75));
-   seat.castShadow=true;seat.receiveShadow=true;scene.add(seat);
-   const trim=new THREE.Mesh(new THREE.BoxGeometry(31.5,.12,.08),new THREE.MeshBasicMaterial({color:side<0?0x168cff:0xff7022}));
-   trim.position.set(0,.66+row*.62,side*(16.05+row*1.75));scene.add(trim);
+   const z=side*(15.8+row*1.55), y=3.2+row*.85;
+   const tier=new THREE.Mesh(new THREE.BoxGeometry(31,.8,1.55),standMats[row+1]);
+   tier.position.set(0,y,z);tier.castShadow=true;scene.add(tier);
+   const lip=new THREE.Mesh(new THREE.BoxGeometry(30.8,.13,.09),side<0?blueGlow:orangeGlow);
+   lip.position.set(0,y-.12,z-side*.78);scene.add(lip);
   }
  }
- // Tall corner floodlight towers with glowing lamps; no shadows on mobile.
+ // Four compact floodlight towers, with bright visible lamp panels and colored glow.
  for(const x of [-20.5,20.5]){
   for(const z of [-14.5,14.5]){
    const pole=new THREE.Mesh(new THREE.CylinderGeometry(.12,.2,8,8),mat(0x52627f));
    pole.position.set(x,4,z);pole.castShadow=true;scene.add(pole);
-   const lamp=new THREE.Mesh(new THREE.BoxGeometry(1.2,.28,.65),new THREE.MeshBasicMaterial({color:0xd9f5ff}));
+   const lamp=new THREE.Mesh(new THREE.BoxGeometry(1.35,.32,.7),new THREE.MeshBasicMaterial({color:0xf0fbff}));
    lamp.position.set(x,8.05,z);scene.add(lamp);
    const glow=new THREE.PointLight(z<0?0x168cff:0xff7022,1.6,24);
    glow.position.set(x,7.6,z);scene.add(glow);
   }
  }
- // A subtle overhead neon ribbon frames the arena without covering the play area.
+ // Elevated neon rails frame the futuristic arena without covering the field.
  for(const side of [-1,1]){
-  const rail=new THREE.Mesh(new THREE.BoxGeometry(.12,.12,29),new THREE.MeshBasicMaterial({color:side<0?0x168cff:0xff7022}));
-  rail.position.set(side*28.4,2.1,0);scene.add(rail);
+  const rail=new THREE.Mesh(new THREE.BoxGeometry(.14,.14,29),side<0?blueGlow:orangeGlow);
+  rail.position.set(side*28.4,5.0,0);scene.add(rail);
  }
 }
 function goal(side){
