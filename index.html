@@ -54,7 +54,7 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.m
 
 let scene,camera,renderer,clock,ball,cars=[],running=false,ballCam=false;
 let blue=0,orange=0,remaining=300,lastGoal=0,perTeam=1,diff="normal",carType="balanced"; let stadiumScoreTextures=[];
-let voiceLang="fr",commentaryClock=0,lastCommentary=0;
+let voiceLang="fr",commentaryClock=0,lastCommentary=0,lastCarVoice=0;
 const voiceSupported=("speechSynthesis" in window)&&("SpeechSynthesisUtterance" in window);
 function speakMatch(fr,en,forceLang){
  if(!voiceSupported)return;
@@ -412,6 +412,7 @@ function collisions(){
    ball.mesh.position.x+=nx*(2.05-dist);ball.mesh.position.z+=nz*(2.05-dist);
    ball.vel.x+=nx*impulse;ball.vel.z+=nz*impulse;
    ball.vel.y=Math.max(ball.vel.y,2.2+Math.max(0,d.vel.y*.12));
+   if(c===cars[0]&&performance.now()-lastCarVoice>6500){lastCarVoice=performance.now();speakMatch("Je suis sur la balle ! On continue !","I am on the ball! Let us keep going!");}
    d.hitCooldown=.09;
   }
  });
