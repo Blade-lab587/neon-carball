@@ -54,6 +54,30 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.m
 
 let scene,camera,renderer,clock,ball,cars=[],running=false,ballCam=false;
 let blue=0,orange=0,remaining=300,lastGoal=0,perTeam=1,diff="normal",carType="balanced"; let stadiumScoreTextures=[];
+let voiceLang="fr",commentaryClock=0,lastCommentary=0;
+const voiceSupported=("speechSynthesis" in window)&&("SpeechSynthesisUtterance" in window);
+function speakMatch(fr,en,forceLang){
+ if(!voiceSupported)return;
+ const lang=forceLang||voiceLang;voiceLang=lang==="fr"?"en":"fr";
+ try{
+  const synth=window.speechSynthesis;synth.cancel();
+  const u=new SpeechSynthesisUtterance(lang==="fr"?fr:en);
+  u.lang=lang==="fr"?"fr-FR":"en-GB";u.rate=1.02;u.pitch=.92;u.volume=.9;
+  const voices=synth.getVoices(),matches=voices.filter(v=>v.lang.toLowerCase().startsWith(lang));
+  if(matches.length)u.voice=matches.find(v=>v.default)||matches[0];
+  synth.speak(u);
+ }catch(e){}
+}
+function matchStartVoice(){commentaryClock=0;lastCommentary=0;speakMatch("Le match commence ! Bienvenue dans NEON CARBALL.","Kick-off! Welcome to NEON CARBALL.","fr");}
+function commentaryVoice(dt){
+ commentaryClock+=dt;if(commentaryClock-lastCommentary<19)return;lastCommentary=commentaryClock;
+ if(!ball||!running)return;const p=ball.mesh.position;
+ if(p.y>3.1)speakMatch("La balle prend de la hauteur ! Quel envol !","The ball is up in the air! What a launch!");
+ else if(Math.abs(p.z)>7)speakMatch("Attention, grosse pression près du but !","Pressure building near the goal!");
+ else if(Math.abs(p.x)>12)speakMatch("Belle ouverture sur le côté !","Great space opening up on the wing!");
+ else speakMatch("Les deux équipes cherchent l'ouverture. Le rythme s'accélère !","Both teams are looking for an opening. The pace is picking up!");
+}
+function boostVoice(){speakMatch("Accélération maximale !","Full boost! What a burst of speed!");}
 const K={}; addEventListener("keydown",e=>{K[e.key.toLowerCase()]=1;if([" ","arrowup","arrowdown","arrowleft","arrowright"].includes(e.key.toLowerCase()))e.preventDefault();if(e.key.toLowerCase()=="c")ballCam=!ballCam;if(e.key.toLowerCase()=="r"&&ball)resetBall()});
 addEventListener("keyup",e=>K[e.key.toLowerCase()]=0);
 addEventListener("blur",()=>{for(const k in K)K[k]=0;document.querySelectorAll(".touch-btn.pressed").forEach(b=>b.classList.remove("pressed"))});
@@ -318,6 +342,7 @@ function drive(c,th,st,boost,dt){
 }
 function human(c,dt){
  let t=0,s=0;if(K.w||K.z||K.arrowup)t=1;if(K.s||K.arrowdown)t=-.65;if(K.a||K.q||K.arrowleft)s=1;if(K.d||K.arrowright)s=-1;
+ if(K[" "]&&!c.userData.voiceBoost&&c.userData.boost>0){boostVoice();c.userData.voiceBoost=true}if(!K[" "])c.userData.voiceBoost=false;
  drive(c,t,s,K[" "],dt);
  if(K.shift&&!c.userData.onGround&&c.userData.jumps==1){c.userData.vel.y=7.5;c.userData.jumps=2}
  else if(K.shift&&c.userData.onGround){c.userData.vel.y=8;c.userData.onGround=false;c.userData.jumps=1}
@@ -393,6 +418,7 @@ function collisions(){
 }
 function score(team){
  if(performance.now()-lastGoal<1200)return;lastGoal=performance.now();team?orange++:blue++;document.querySelector("#b").textContent=blue;document.querySelector("#o").textContent=orange;drawStadiumScores();
+ speakMatch(team?"BUT POUR LES ORANGE ! Quel tir !":"BUUUT POUR LES BLEUS ! Magnifique action !",team?"GOAL FOR ORANGE! What a strike!":"GOAL FOR BLUE! What a finish!");
  const f=document.querySelector("#flash");f.textContent="BUT !";f.style.display="block";setTimeout(()=>{f.style.display="none";resetBall()},800)
 }
 function cam(dt){
@@ -401,7 +427,7 @@ function cam(dt){
  camera.position.lerp(p,1-Math.pow(.001,dt));camera.lookAt(target.x,target.y+1,target.z)
 }
 function fmt(s){s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
-function loop(){requestAnimationFrame(loop);refreshMobileUI();const dt=Math.min(clock.getDelta(),.033);if(running){remaining-=dt;document.querySelector("#timer").textContent=fmt(remaining);cars.forEach((c,i)=>i?ai(c,dt):human(c,dt));ballPhysics(dt);collisions();cam(dt);document.querySelector("#fill").style.width=cars[0].userData.boost+"%";if(remaining<=0){running=false;document.querySelector("#flash").innerHTML="FIN DU MATCH<br><small>"+blue+" — "+orange+"</small>";document.querySelector("#flash").style.display="block";setTimeout(()=>{document.querySelector("#flash").style.display="none";document.querySelector("#menu").style.display="flex";document.querySelector("#score").style.display="none";document.querySelector("#boost").style.display="none";document.querySelector("#help").style.display="none"},2200)}}renderer.render(scene,camera)}
+function loop(){requestAnimationFrame(loop);refreshMobileUI();const dt=Math.min(clock.getDelta(),.033);if(running){remaining-=dt;commentaryVoice(dt);document.querySelector("#timer").textContent=fmt(remaining);cars.forEach((c,i)=>i?ai(c,dt):human(c,dt));ballPhysics(dt);collisions();cam(dt);document.querySelector("#fill").style.width=cars[0].userData.boost+"%";if(remaining<=0){running=false;speakMatch("Fin du match ! Score final : "+blue+" à "+orange+". Merci de jouer !","Full time! Final score: "+blue+" to "+orange+". Thanks for playing!");document.querySelector("#flash").innerHTML="FIN DU MATCH<br><small>"+blue+" — "+orange+"</small>";document.querySelector("#flash").style.display="block";setTimeout(()=>{document.querySelector("#flash").style.display="none";document.querySelector("#menu").style.display="flex";document.querySelector("#score").style.display="none";document.querySelector("#boost").style.display="none";document.querySelector("#help").style.display="none"},2200)}}renderer.render(scene,camera)}
 function init(){
  scene=new THREE.Scene();scene.background=new THREE.Color(0x050914);scene.fog=new THREE.Fog(0x050914,35,80);
  camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,160);camera.position.set(0,7,15);
@@ -413,7 +439,7 @@ document.querySelector("#car").onchange=e=>{carType=e.target.value;document.quer
 document.querySelector("#start").onclick=()=>{
  perTeam=+document.querySelector("#teams").value;diff=document.querySelector("#diff").value;remaining=+document.querySelector("#duration").value;if(matchMedia("(pointer: coarse)").matches&&screen.orientation&&screen.orientation.lock){screen.orientation.lock("landscape").catch(()=>{});}
  blue=orange=0;document.querySelector("#b").textContent=0;document.querySelector("#o").textContent=0;document.querySelector("#menu").style.display="none";document.querySelector("#score").style.display="block";document.querySelector("#boost").style.display="block";document.querySelector("#help").style.display="block";
- [...scene.children].forEach(o=>scene.remove(o));cars=[];arena();makeBall();for(let t=0;t<2;t++)for(let i=0;i<perTeam;i++)cars.push(car(t,!(t==0&&i==0),i));resetBall();running=true;refreshMobileUI()
+ [...scene.children].forEach(o=>scene.remove(o));cars=[];arena();makeBall();for(let t=0;t<2;t++)for(let i=0;i<perTeam;i++)cars.push(car(t,!(t==0&&i==0),i));resetBall();running=true;matchStartVoice();refreshMobileUI()
 };
 init();
 </script>
