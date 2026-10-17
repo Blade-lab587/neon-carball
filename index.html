@@ -2,11 +2,11 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Neon Carball</title>
 <style>
 *{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:#050812;font-family:Arial;color:#fff}
-canvas{display:block}.ui{position:fixed;z-index:5;pointer-events:none;text-shadow:0 2px 8px #000}
+canvas{display:block;touch-action:none}html,body{touch-action:manipulation;-webkit-user-select:none;user-select:none}#mobileControls{display:none;position:fixed;z-index:15;inset:0;pointer-events:none}.touch-cluster{position:absolute;bottom:max(18px,env(safe-area-inset-bottom));display:flex;gap:10px;align-items:flex-end;pointer-events:auto}#touchDrive{left:max(14px,env(safe-area-inset-left))}#touchActions{right:max(14px,env(safe-area-inset-right));flex-wrap:wrap;justify-content:flex-end;width:min(42vw,280px)}.touch-btn{width:62px;height:62px;border-radius:18px;border:2px solid #8bbaff;background:rgba(10,24,50,.78);color:white;font-size:22px;font-weight:900;touch-action:none;user-select:none;-webkit-user-select:none;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px #0008}.touch-btn.action{width:58px;height:58px;font-size:13px}.touch-btn:active,.touch-btn.pressed{background:rgba(35,116,255,.9);transform:scale(.96)}#landscapeNotice{display:none;position:fixed;inset:0;z-index:40;background:#050812;color:#fff;align-items:center;justify-content:center;text-align:center;padding:28px;font-size:20px;font-weight:800}#landscapeNotice .inner{max-width:320px}#landscapeNotice .rotate{font-size:54px;margin-bottom:18px}@media (pointer:coarse){#mobileControls.active{display:block}#help{display:none!important}#boost{right:14px;bottom:14px;width:140px}#score{top:max(8px,env(safe-area-inset-top));font-size:24px}}@media (orientation:portrait) and (pointer:coarse){#landscapeNotice.active{display:flex}#mobileControls.active{display:none}}.ui{position:fixed;z-index:5;pointer-events:none;text-shadow:0 2px 8px #000}
 #score{top:16px;left:50%;transform:translateX(-50%);font-size:30px;font-weight:800}
 #timer{font-size:15px;text-align:center;color:#cbd8ff;margin-top:3px}
 #boost{right:24px;bottom:24px;width:220px;height:18px;border:2px solid #fff;border-radius:20px;overflow:hidden;display:none}
@@ -47,7 +47,7 @@ button:hover{background:#4387ff}
 </div></div>
 <div id="score" class="ui" style="display:none"><span id="b">0</span> — <span id="o">0</span><div id="timer">5:00</div></div>
 <div id="boost" class="ui"><div id="fill"></div></div>
-<div id="help" class="ui">ZQSD / WASD : conduire · ESPACE : boost · SHIFT : saut/double saut · C : caméra ballon · R : reset</div>
+<div id="help" class="ui">ZQSD / WASD : conduire · ESPACE : boost · SHIFT : saut/double saut · C : caméra ballon · R : reset</div><div id="mobileControls"><div id="touchDrive" class="touch-cluster"><button class="touch-btn" data-key="a">◀</button><div style="display:flex;flex-direction:column;gap:8px"><button class="touch-btn" data-key="w">▲</button><button class="touch-btn" data-key="s">▼</button></div><button class="touch-btn" data-key="d">▶</button></div><div id="touchActions" class="touch-cluster"><button class="touch-btn action" data-action="boost">BOOST</button><button class="touch-btn action" data-action="jump">SAUT</button><button class="touch-btn action" data-action="camera">CAM</button><button class="touch-btn action" data-action="reset">RESET</button></div></div><div id="landscapeNotice"><div class="inner"><div class="rotate">📱 ↻</div>Tourne ton téléphone en mode paysage pour jouer à NEON CARBALL.</div></div>
 <div id="flash"></div>
 <script type="module">
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
@@ -56,6 +56,31 @@ let scene,camera,renderer,clock,ball,cars=[],running=false,ballCam=false;
 let blue=0,orange=0,remaining=300,lastGoal=0,perTeam=1,diff="normal",carType="balanced";
 const K={}; addEventListener("keydown",e=>{K[e.key.toLowerCase()]=1;if([" ","arrowup","arrowdown","arrowleft","arrowright"].includes(e.key.toLowerCase()))e.preventDefault();if(e.key.toLowerCase()=="c")ballCam=!ballCam;if(e.key.toLowerCase()=="r"&&ball)resetBall()});
 addEventListener("keyup",e=>K[e.key.toLowerCase()]=0);
+function refreshMobileUI(){
+ const active=running&&matchMedia("(pointer: coarse)").matches;
+ document.querySelector("#mobileControls").classList.toggle("active",active);
+ document.querySelector("#landscapeNotice").classList.toggle("active",active&&matchMedia("(orientation: portrait)").matches);
+}
+document.querySelectorAll(".touch-btn[data-key]").forEach(btn=>{
+ const key=btn.dataset.key;
+ const down=e=>{e.preventDefault();K[key]=1;btn.classList.add("pressed");try{btn.setPointerCapture(e.pointerId)}catch(_){}};
+ const up=e=>{e.preventDefault();K[key]=0;btn.classList.remove("pressed")};
+ btn.addEventListener("pointerdown",down);btn.addEventListener("pointerup",up);btn.addEventListener("pointercancel",up);btn.addEventListener("lostpointercapture",up);
+});
+document.querySelectorAll(".touch-btn[data-action]").forEach(btn=>{
+ btn.addEventListener("pointerdown",e=>{
+  e.preventDefault();btn.classList.add("pressed");
+  const action=btn.dataset.action;
+  if(action==="boost")K[" "]=1;
+  if(action==="jump"&&cars[0]){const d=cars[0].userData;if(d.onGround){d.vel.y=8;d.onGround=false;d.jumps=1}else if(d.jumps===1){d.vel.y=7.5;d.jumps=2}}
+  if(action==="camera")ballCam=!ballCam;
+  if(action==="reset")resetBall();
+ });
+ const release=e=>{e.preventDefault();btn.classList.remove("pressed");if(btn.dataset.action==="boost")K[" "]=0};
+ btn.addEventListener("pointerup",release);btn.addEventListener("pointercancel",release);btn.addEventListener("lostpointercapture",release);
+});
+addEventListener("resize",refreshMobileUI);addEventListener("orientationchange",()=>setTimeout(refreshMobileUI,150));
+
 
 const cfg={
  balanced:{max:19,acc:25,turn:2.6,mass:1},
@@ -217,7 +242,7 @@ function cam(dt){
  camera.position.lerp(p,1-Math.pow(.001,dt));camera.lookAt(target.x,target.y+1,target.z)
 }
 function fmt(s){s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
-function loop(){requestAnimationFrame(loop);const dt=Math.min(clock.getDelta(),.033);if(running){remaining-=dt;document.querySelector("#timer").textContent=fmt(remaining);cars.forEach((c,i)=>i?ai(c,dt):human(c,dt));ballPhysics(dt);collisions();cam(dt);document.querySelector("#fill").style.width=cars[0].userData.boost+"%";if(remaining<=0){running=false;document.querySelector("#flash").innerHTML="FIN DU MATCH<br><small>"+blue+" — "+orange+"</small>";document.querySelector("#flash").style.display="block";setTimeout(()=>{document.querySelector("#flash").style.display="none";document.querySelector("#menu").style.display="flex";document.querySelector("#score").style.display="none";document.querySelector("#boost").style.display="none";document.querySelector("#help").style.display="none"},2200)}}renderer.render(scene,camera)}
+function loop(){requestAnimationFrame(loop);refreshMobileUI();const dt=Math.min(clock.getDelta(),.033);if(running){remaining-=dt;document.querySelector("#timer").textContent=fmt(remaining);cars.forEach((c,i)=>i?ai(c,dt):human(c,dt));ballPhysics(dt);collisions();cam(dt);document.querySelector("#fill").style.width=cars[0].userData.boost+"%";if(remaining<=0){running=false;document.querySelector("#flash").innerHTML="FIN DU MATCH<br><small>"+blue+" — "+orange+"</small>";document.querySelector("#flash").style.display="block";setTimeout(()=>{document.querySelector("#flash").style.display="none";document.querySelector("#menu").style.display="flex";document.querySelector("#score").style.display="none";document.querySelector("#boost").style.display="none";document.querySelector("#help").style.display="none"},2200)}}renderer.render(scene,camera)}
 function init(){
  scene=new THREE.Scene();scene.background=new THREE.Color(0x050914);scene.fog=new THREE.Fog(0x050914,35,80);
  camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,160);camera.position.set(0,7,15);
@@ -227,9 +252,9 @@ function init(){
 }
 document.querySelector("#car").onchange=e=>{carType=e.target.value;document.querySelector("#carInfo").textContent=carInfo[carType]||carInfo.balanced};
 document.querySelector("#start").onclick=()=>{
- perTeam=+document.querySelector("#teams").value;diff=document.querySelector("#diff").value;remaining=+document.querySelector("#duration").value;
+ perTeam=+document.querySelector("#teams").value;diff=document.querySelector("#diff").value;remaining=+document.querySelector("#duration").value;if(matchMedia("(pointer: coarse)").matches&&screen.orientation&&screen.orientation.lock){screen.orientation.lock("landscape").catch(()=>{});}
  blue=orange=0;document.querySelector("#b").textContent=0;document.querySelector("#o").textContent=0;document.querySelector("#menu").style.display="none";document.querySelector("#score").style.display="block";document.querySelector("#boost").style.display="block";document.querySelector("#help").style.display="block";
- [...scene.children].forEach(o=>scene.remove(o));cars=[];arena();makeBall();for(let t=0;t<2;t++)for(let i=0;i<perTeam;i++)cars.push(car(t,!(t==0&&i==0),i));resetBall();running=true
+ [...scene.children].forEach(o=>scene.remove(o));cars=[];arena();makeBall();for(let t=0;t<2;t++)for(let i=0;i<perTeam;i++)cars.push(car(t,!(t==0&&i==0),i));resetBall();running=true;refreshMobileUI()
 };
 init();
 </script>
