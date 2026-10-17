@@ -144,16 +144,29 @@ function arena(){
  scene.add(new THREE.HemisphereLight(0x9bbcff,0x090b18,2.8));
  const l=new THREE.DirectionalLight(0xffffff,3.2);l.position.set(8,18,7);l.castShadow=true;scene.add(l);
  const floor=new THREE.Mesh(new THREE.BoxGeometry(42,.5,28),mat(0x111b30));floor.position.y=-.25;floor.receiveShadow=true;scene.add(floor);
- const field=new THREE.Mesh(new THREE.PlaneGeometry(40,26),new THREE.MeshStandardMaterial({color:0x182943,roughness:.85}));
+ const field=new THREE.Mesh(new THREE.PlaneGeometry(40,26),new THREE.MeshStandardMaterial({color:0x23452f,roughness:.9}));
  field.rotation.x=-Math.PI/2;field.position.y=.01;field.receiveShadow=true;scene.add(field);
+ // Alternating grass bands add depth without changing the playable dimensions.
+ for(let i=0;i<10;i++){
+  const stripe=new THREE.Mesh(new THREE.PlaneGeometry(40,2.6),new THREE.MeshStandardMaterial({color:i%2?0x285638:0x2e603d,roughness:1}));
+  stripe.rotation.x=-Math.PI/2;stripe.position.set(0,.022,-11.7+i*2.6);stripe.receiveShadow=true;scene.add(stripe);
+ }
  const wm=mat(0x293e67);
  for(const [x,y,z,sx,sy,sz] of [[0,1,13.8,42,3,.5],[0,1,-13.8,42,3,.5],[20.8,1,0,.5,3,28],[-20.8,1,0,.5,3,28]]){
   const m=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),wm);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;scene.add(m);
  }
- const lineMat=new THREE.MeshBasicMaterial({color:0x7198e8});
- const line=new THREE.Mesh(new THREE.BoxGeometry(.08,.03,26),lineMat);line.position.y=.03;scene.add(line);
- const circle=new THREE.Mesh(new THREE.RingGeometry(3.0,3.08,64),new THREE.MeshBasicMaterial({color:0x7198e8,side:THREE.DoubleSide}));circle.rotation.x=-Math.PI/2;circle.position.y=.035;scene.add(circle);
- for(const x of [-10,10]){const m=new THREE.Mesh(new THREE.BoxGeometry(.06,.035,26),lineMat);m.position.set(x,.035,0);scene.add(m)}
+ const lineMat=new THREE.MeshBasicMaterial({color:0xe6f5ff});
+ const mark=(x,z,sx,sz)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(sx,.035,sz),lineMat);m.position.set(x,.045,z);scene.add(m)};
+ mark(0,0,40,.075);
+ mark(0,12.8,40,.075);mark(0,-12.8,40,.075);
+ mark(-19.8,0,.075,25.6);mark(19.8,0,.075,25.6);
+ // Penalty boxes and small goal areas at both ends.
+ for(const side of [-1,1]){
+  mark(0,side*8.7,19,.065);
+  mark(-9.5,side*10.75,.065,4.1);mark(9.5,side*10.75,.065,4.1);
+  mark(0,side*6.7,12,.065);
+ }
+ const circle=new THREE.Mesh(new THREE.RingGeometry(3.0,3.08,64),new THREE.MeshBasicMaterial({color:0xe6f5ff,side:THREE.DoubleSide}));circle.rotation.x=-Math.PI/2;circle.position.y=.05;scene.add(circle);
  goal(-1);goal(1);
 }
 function goal(side){
@@ -166,9 +179,24 @@ function goal(side){
 }
 function makeBall(){
  const group=new THREE.Group();
- const m=new THREE.Mesh(new THREE.SphereGeometry(1.05,32,20),new THREE.MeshStandardMaterial({color:0xf6f8ff,metalness:.25,roughness:.2}));m.castShadow=true;group.add(m);
- const glow=new THREE.PointLight(0x9defff,2.2,7);glow.position.y=.2;group.add(glow);
- group.position.set(0,1.05,0);scene.add(group);ball={mesh:group,vel:new THREE.Vector3(),radius:1.05};
+ const radius=1.05;
+ const m=new THREE.Mesh(new THREE.SphereGeometry(radius,32,24),new THREE.MeshStandardMaterial({color:0xf4f7ff,metalness:.18,roughness:.28}));m.castShadow=true;group.add(m);
+ // Dark hexagonal panels give the ball a recognisable football pattern.
+ const panelMat=new THREE.MeshStandardMaterial({color:0x172237,roughness:.72,metalness:.08});
+ const normals=[
+  [0,1,0],[0,-1,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1],
+  [.58,.58,.58],[-.58,.58,.58],[.58,.58,-.58],[-.58,.58,-.58],
+  [.58,-.58,.58],[-.58,-.58,.58],[.58,-.58,-.58],[-.58,-.58,-.58]
+ ];
+ for(const n of normals){
+  const normal=new THREE.Vector3(...n).normalize();
+  const patch=new THREE.Mesh(new THREE.CircleGeometry(.205,6),panelMat);
+  patch.position.copy(normal).multiplyScalar(radius*.997);
+  patch.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),normal);
+  patch.castShadow=true;group.add(patch);
+ }
+ const glow=new THREE.PointLight(0x9defff,1.5,6);glow.position.y=.2;group.add(glow);
+ group.position.set(0,radius,0);scene.add(group);ball={mesh:group,vel:new THREE.Vector3(),radius};
 }
 function resetBall(){
  if(!ball)return;
