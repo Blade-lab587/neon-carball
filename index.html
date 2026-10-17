@@ -175,6 +175,45 @@ function arena(){
  }
  const circle=new THREE.Mesh(new THREE.RingGeometry(3.0,3.08,64),new THREE.MeshBasicMaterial({color:0xe6f5ff,side:THREE.DoubleSide}));circle.rotation.x=-Math.PI/2;circle.position.y=.05;scene.add(circle);
  goal(-1);goal(1);
+ stadiumDecor();
+}
+function stadiumDecor(){
+ // Three compact seating tiers outside the playing walls.
+ const standMats=[mat(0x17243c),mat(0x202f4d),mat(0x293a5b)];
+ for(const side of [-1,1]){
+  for(let row=0;row<3;row++){
+   const seat=new THREE.Mesh(new THREE.BoxGeometry(2.1,.65,25.5),standMats[row]);
+   seat.position.set(side*(22.3+row*2.05),.25+row*.58,0);
+   seat.castShadow=true;seat.receiveShadow=true;scene.add(seat);
+   const trim=new THREE.Mesh(new THREE.BoxGeometry(.08,.12,25.2),new THREE.MeshBasicMaterial({color:row===1?0x168cff:0x42577d}));
+   trim.position.set(side*(21.25+row*2.05),.6+row*.58,0);scene.add(trim);
+  }
+ }
+ for(const side of [-1,1]){
+  for(let row=0;row<2;row++){
+   const seat=new THREE.Mesh(new THREE.BoxGeometry(32,.65,1.65),standMats[row+1]);
+   seat.position.set(0,.3+row*.62,side*(16.9+row*1.75));
+   seat.castShadow=true;seat.receiveShadow=true;scene.add(seat);
+   const trim=new THREE.Mesh(new THREE.BoxGeometry(31.5,.12,.08),new THREE.MeshBasicMaterial({color:side<0?0x168cff:0xff7022}));
+   trim.position.set(0,.66+row*.62,side*(16.05+row*1.75));scene.add(trim);
+  }
+ }
+ // Tall corner floodlight towers with glowing lamps; no shadows on mobile.
+ for(const x of [-20.5,20.5]){
+  for(const z of [-14.5,14.5]){
+   const pole=new THREE.Mesh(new THREE.CylinderGeometry(.12,.2,8,8),mat(0x52627f));
+   pole.position.set(x,4,z);pole.castShadow=true;scene.add(pole);
+   const lamp=new THREE.Mesh(new THREE.BoxGeometry(1.2,.28,.65),new THREE.MeshBasicMaterial({color:0xd9f5ff}));
+   lamp.position.set(x,8.05,z);scene.add(lamp);
+   const glow=new THREE.PointLight(z<0?0x168cff:0xff7022,1.6,24);
+   glow.position.set(x,7.6,z);scene.add(glow);
+  }
+ }
+ // A subtle overhead neon ribbon frames the arena without covering the play area.
+ for(const side of [-1,1]){
+  const rail=new THREE.Mesh(new THREE.BoxGeometry(.12,.12,29),new THREE.MeshBasicMaterial({color:side<0?0x168cff:0xff7022}));
+  rail.position.set(side*28.4,2.1,0);scene.add(rail);
+ }
 }
 function goal(side){
  const z=side*14, c=side<0?0x168cff:0xff7022,m=mat(c);
