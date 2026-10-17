@@ -204,6 +204,12 @@ function car(team,ai,index){
   }
   const cap=new THREE.Mesh(new THREE.CylinderGeometry(r*.16,r*.16,.05,12),new THREE.MeshStandardMaterial({color:accent,metalness:.65,roughness:.25}));
   cap.rotation.z=Math.PI/2;cap.position.x=outer+Math.sign(x)*.045;wheelGroup.add(cap);
+  // Demi-arches de carrosserie au-dessus des pneus pour une silhouette plus automobile.
+  const archMat=new THREE.MeshStandardMaterial({color:0x111a2a,metalness:.72,roughness:.3});
+  const arch=new THREE.Mesh(new THREE.TorusGeometry(r+.065,.065,8,20,Math.PI),archMat);
+  arch.rotation.y=Math.PI/2;
+  arch.position.set(x+Math.sign(x)*.145,.47,z);
+  arch.castShadow=true;wheelGroup.add(arch);
   wheels.push(wheelGroup);
  }
  const flame=new THREE.Mesh(new THREE.ConeGeometry(type==='nova'?.27:.22,type==='nova'?1.35:1.15,10),new THREE.MeshBasicMaterial({color:accent,transparent:true,opacity:.9}));
