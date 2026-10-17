@@ -12,7 +12,7 @@ canvas{display:block;touch-action:none}html,body{touch-action:manipulation;-webk
 #boost{right:24px;bottom:24px;width:220px;height:18px;border:2px solid #fff;border-radius:20px;overflow:hidden;display:none}
 #fill{height:100%;width:100%;background:#39dfff}
 #help{left:18px;bottom:18px;font-size:13px;display:none}
-@media(max-height:500px) and (pointer:fine){
+@media(max-height:500px){
  #help{display:none!important}
  #boost{bottom:14px;right:14px;width:180px}
 }
@@ -211,7 +211,7 @@ function car(team,ai,index){
  if(type==='nova'){
   for(const x of [-.72,.72]){const pod=new THREE.Mesh(new THREE.BoxGeometry(.25,.18,1.55),new THREE.MeshBasicMaterial({color:accent}));pod.position.set(x,.7,-.1);g.add(pod)}
  }
- const wheelX=bodySize[0]/2+.02;
+ const wheelX=bodySize[0]/2+.16; // Pneus entièrement dégagés de la carrosserie.
  const wheels=[];
  const rimMat=new THREE.MeshStandardMaterial({color:0x8fa7c9,metalness:.88,roughness:.24});
  const spokeMat=new THREE.MeshStandardMaterial({color:0x26344a,metalness:.9,roughness:.28});
