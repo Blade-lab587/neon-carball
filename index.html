@@ -12,6 +12,10 @@ canvas{display:block;touch-action:none}html,body{touch-action:manipulation;-webk
 #boost{right:24px;bottom:24px;width:220px;height:18px;border:2px solid #fff;border-radius:20px;overflow:hidden;display:none}
 #fill{height:100%;width:100%;background:#39dfff}
 #help{left:18px;bottom:18px;font-size:13px;display:none}
+@media(max-height:500px) and (pointer:fine){
+ #help{display:none!important}
+ #boost{bottom:14px;right:14px;width:180px}
+}
 #menu{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 35%,#1b315e,#050812 65%)}
 /* Le menu reste accessible même quand la fenêtre est basse : le panneau peut défiler. */
 #menu{overflow-y:auto;overscroll-behavior:contain;padding:12px 0}
@@ -227,12 +231,7 @@ function car(team,ai,index){
   }
   const cap=new THREE.Mesh(new THREE.CylinderGeometry(r*.16,r*.16,.05,12),new THREE.MeshStandardMaterial({color:accent,metalness:.65,roughness:.25}));
   cap.rotation.z=Math.PI/2;cap.position.x=outer+Math.sign(x)*.045;wheelGroup.add(cap);
-  // Demi-arches de carrosserie au-dessus des pneus pour une silhouette plus automobile.
-  const archMat=new THREE.MeshStandardMaterial({color:0x111a2a,metalness:.72,roughness:.3});
-  const arch=new THREE.Mesh(new THREE.TorusGeometry(r+.065,.065,8,20,Math.PI),archMat);
-  arch.rotation.y=Math.PI/2;
-  arch.position.set(x+Math.sign(x)*.145,.47,z);
-  arch.castShadow=true;wheelGroup.add(arch);
+  // Arches de roue retirées : le modèle de pneu reste dégagé.
   wheels.push(wheelGroup);
  }
  const flame=new THREE.Mesh(new THREE.ConeGeometry(type==='nova'?.27:.22,type==='nova'?1.35:1.15,10),new THREE.MeshBasicMaterial({color:accent,transparent:true,opacity:.9}));
