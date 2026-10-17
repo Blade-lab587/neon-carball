@@ -20,7 +20,7 @@ select,button{width:100%;padding:13px;border-radius:11px;border:1px solid #435a8
 button{margin-top:22px;background:#2874ff;border:0;font-weight:800;cursor:pointer}
 button:hover{background:#4387ff}
 #carInfo{margin-top:15px;padding:12px;border-radius:10px;background:#0e172b;color:#a9bce8;font-size:13px}
-#flash{position:fixed;z-index:10;left:50%;top:43%;transform:translate(-50%,-50%);font-size:58px;font-weight:900;display:none;text-align:center}
+#flash{position:fixed;z-index:10;left:50%;top:43%;transform:translate(-50%,-50%);font-size:58px;font-weight:900;display:none;text-align:center}#pauseBtn{position:fixed;z-index:12;top:18px;right:18px;width:auto;margin:0;padding:9px 14px;border:1px solid #7188ba;background:#101b32;color:#fff;font-size:14px}#pauseMenu{position:fixed;z-index:30;inset:0;display:none;align-items:center;justify-content:center;background:#030714cc;backdrop-filter:blur(5px)}#pauseMenu .pause-panel{width:min(360px,88vw);padding:26px;border:1px solid #5876b2;border-radius:20px;background:#0b1428;text-align:center;box-shadow:0 20px 70px #000b}#pauseMenu h2{margin:0 0 8px;font-size:30px}#pauseMenu p{color:#aabce3;margin:0 0 12px}#pauseMenu button{margin-top:10px}#pauseMenu #menuBtn{background:#202c45;border:1px solid #52648a}
 </style>
 </head>
 <body>
@@ -49,14 +49,14 @@ button:hover{background:#4387ff}
 <select id="duration"><option value="180">3 minutes</option><option value="300" selected>5 minutes</option><option value="600">10 minutes</option></select>
 <button id="start">JOUER</button>
 </div></div>
-<div id="score" class="ui" style="display:none"><span id="b">0</span> — <span id="o">0</span><div id="timer">5:00</div></div>
+<div id="score" class="ui" style="display:none"><span id="b">0</span> — <span id="o">0</span><div id="timer">5:00</div></div><button id="pauseBtn" style="display:none" aria-label="Mettre le match en pause">Ⅱ PAUSE</button><div id="pauseMenu"><div class="pause-panel"><h2>PAUSE</h2><p>Le match est suspendu.</p><button id="resumeBtn">REPRENDRE</button><button id="menuBtn">RETOUR AU MENU</button></div></div>
 <div id="boost" class="ui"><div id="fill"></div></div>
-<div id="help" class="ui">ZQSD / WASD : conduire · ESPACE : boost · SHIFT : saut/double saut · C : caméra ballon · R : reset</div><div id="mobileControls"><div id="touchDrive" class="touch-cluster"><button class="touch-btn" data-key="a">◀</button><div style="display:flex;flex-direction:column;gap:8px"><button class="touch-btn" data-key="w">▲</button><button class="touch-btn" data-key="s">▼</button></div><button class="touch-btn" data-key="d">▶</button></div><div id="touchActions" class="touch-cluster"><button class="touch-btn action" data-action="boost">BOOST</button><button class="touch-btn action" data-action="jump">SAUT</button><button class="touch-btn action" data-action="camera">CAM</button><button class="touch-btn action" data-action="reset">RESET</button></div></div><div id="landscapeNotice"><div class="inner"><div class="rotate">📱 ↻</div>Tourne ton téléphone en mode paysage pour jouer à NEON CARBALL.</div></div>
+<div id="help" class="ui">ZQSD / WASD : conduire · ESPACE : boost · SHIFT : saut/double saut · C : caméra ballon · R : reset</div><div id="mobileControls"><div id="touchDrive" class="touch-cluster"><button class="touch-btn" data-key="a">◀</button><div style="display:flex;flex-direction:column;gap:8px"><button class="touch-btn" data-key="w">▲</button><button class="touch-btn" data-key="s">▼</button></div><button class="touch-btn" data-key="d">▶</button></div><div id="touchActions" class="touch-cluster"><button class="touch-btn action" data-action="boost">BOOST</button><button class="touch-btn action" data-action="jump">SAUT</button><button class="touch-btn action" data-action="camera">CAM</button><button class="touch-btn action" data-action="pause">PAUSE</button><button class="touch-btn action" data-action="reset">RESET</button></div></div><div id="landscapeNotice"><div class="inner"><div class="rotate">📱 ↻</div>Tourne ton téléphone en mode paysage pour jouer à NEON CARBALL.</div></div>
 <div id="flash"></div>
 <script type="module">
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
 
-let scene,camera,renderer,clock,ball,cars=[],running=false,ballCam=false;
+let scene,camera,renderer,clock,ball,cars=[],running=false,paused=false,ballCam=false;
 let blue=0,orange=0,remaining=300,lastGoal=0,perTeam=1,diff="normal",carType="balanced"; let stadiumScoreTextures=[];let stadiumType="neon",skyType="night";
 let voiceLang="fr",commentaryClock=0,lastCommentary=0,lastCarVoice=0;
 const voiceSupported=("speechSynthesis" in window)&&("SpeechSynthesisUtterance" in window);
@@ -82,11 +82,12 @@ function commentaryVoice(dt){
  else speakMatch("Les deux équipes cherchent l'ouverture. Le rythme s'accélère !","Both teams are looking for an opening. The pace is picking up!");
 }
 function boostVoice(){speakMatch("Accélération maximale !","Full boost! What a burst of speed!");}
-const K={}; addEventListener("keydown",e=>{K[e.key.toLowerCase()]=1;if([" ","arrowup","arrowdown","arrowleft","arrowright"].includes(e.key.toLowerCase()))e.preventDefault();if(e.key.toLowerCase()=="c")ballCam=!ballCam;if(e.key.toLowerCase()=="r"&&ball)resetBall()});
+function togglePause(force){if(!running)return;paused=typeof force==="boolean"?force:!paused;document.querySelector("#pauseMenu").style.display=paused?"flex":"none";document.querySelector("#pauseBtn").textContent=paused?"▶ REPRENDRE":"Ⅱ PAUSE";if(paused){for(const k in K)K[k]=0;document.querySelectorAll(".touch-btn.pressed").forEach(b=>b.classList.remove("pressed"));}refreshMobileUI()}
+const K={}; addEventListener("keydown",e=>{const key=e.key.toLowerCase();if(key==="p"||key==="escape"){e.preventDefault();togglePause();return}K[key]=1;if([" ","arrowup","arrowdown","arrowleft","arrowright"].includes(key))e.preventDefault();if(key==="c")ballCam=!ballCam;if(key==="r"&&ball)resetBall()});
 addEventListener("keyup",e=>K[e.key.toLowerCase()]=0);
 addEventListener("blur",()=>{for(const k in K)K[k]=0;document.querySelectorAll(".touch-btn.pressed").forEach(b=>b.classList.remove("pressed"))});
 function refreshMobileUI(){
- const active=running&&matchMedia("(pointer: coarse)").matches;
+ const active=running&&!paused&&matchMedia("(pointer: coarse)").matches;
  document.querySelector("#mobileControls").classList.toggle("active",active);
  document.querySelector("#landscapeNotice").classList.toggle("active",active&&matchMedia("(orientation: portrait)").matches);
 }
@@ -103,7 +104,8 @@ document.querySelectorAll(".touch-btn[data-action]").forEach(btn=>{
   if(action==="boost")K[" "]=1;
   if(action==="jump"&&cars[0]){const d=cars[0].userData;if(d.onGround){d.vel.y=8;d.onGround=false;d.jumps=1}else if(d.jumps===1){d.vel.y=7.5;d.jumps=2}}
   if(action==="camera")ballCam=!ballCam;
-  if(action==="reset")resetBall();
+  if(action==="pause")togglePause();
+  if(action==="reset"&&!paused)resetBall();
  });
  const release=e=>{e.preventDefault();btn.classList.remove("pressed");if(btn.dataset.action==="boost")K[" "]=0};
  btn.addEventListener("pointerup",release);btn.addEventListener("pointercancel",release);btn.addEventListener("lostpointercapture",release);
@@ -461,7 +463,7 @@ function cam(dt){
  camera.position.lerp(p,1-Math.pow(.001,dt));camera.lookAt(target.x,target.y+1,target.z)
 }
 function fmt(s){s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
-function loop(){requestAnimationFrame(loop);refreshMobileUI();const dt=Math.min(clock.getDelta(),.033);if(running){remaining-=dt;commentaryVoice(dt);document.querySelector("#timer").textContent=fmt(remaining);cars.forEach((c,i)=>i?ai(c,dt):human(c,dt));ballPhysics(dt);collisions();cam(dt);document.querySelector("#fill").style.width=cars[0].userData.boost+"%";if(remaining<=0){running=false;speakMatch("Fin du match ! Score final : "+blue+" à "+orange+". Merci de jouer !","Full time! Final score: "+blue+" to "+orange+". Thanks for playing!");document.querySelector("#flash").innerHTML="FIN DU MATCH<br><small>"+blue+" — "+orange+"</small>";document.querySelector("#flash").style.display="block";setTimeout(()=>{document.querySelector("#flash").style.display="none";document.querySelector("#menu").style.display="flex";document.querySelector("#score").style.display="none";document.querySelector("#boost").style.display="none";document.querySelector("#help").style.display="none"},2200)}}renderer.render(scene,camera)}
+function loop(){requestAnimationFrame(loop);refreshMobileUI();const dt=Math.min(clock.getDelta(),.033);if(running&&!paused){remaining-=dt;commentaryVoice(dt);document.querySelector("#timer").textContent=fmt(remaining);cars.forEach((c,i)=>i?ai(c,dt):human(c,dt));ballPhysics(dt);collisions();cam(dt);document.querySelector("#fill").style.width=cars[0].userData.boost+"%";if(remaining<=0){running=false;speakMatch("Fin du match ! Score final : "+blue+" à "+orange+". Merci de jouer !","Full time! Final score: "+blue+" to "+orange+". Thanks for playing!");document.querySelector("#flash").innerHTML="FIN DU MATCH<br><small>"+blue+" — "+orange+"</small>";document.querySelector("#flash").style.display="block";setTimeout(()=>{document.querySelector("#flash").style.display="none";document.querySelector("#menu").style.display="flex";document.querySelector("#score").style.display="none";document.querySelector("#boost").style.display="none";document.querySelector("#help").style.display="none";document.querySelector("#pauseBtn").style.display="none";document.querySelector("#pauseMenu").style.display="none";paused=false},2200)}}renderer.render(scene,camera)}
 function applySky(){
  if(!scene)return;
  const sky={night:{bg:0x050914,fog:0x050914},sunset:{bg:0x3b1837,fog:0x3b1837},day:{bg:0x73b8e8,fog:0x73b8e8}}[skyType]||{bg:0x050914,fog:0x050914};
@@ -477,9 +479,12 @@ function init(){
 document.querySelector("#car").onchange=e=>{carType=e.target.value;document.querySelector("#carInfo").textContent=carInfo[carType]||carInfo.balanced};
 document.querySelector("#stadium").onchange=e=>{stadiumType=e.target.value};
 document.querySelector("#sky").onchange=e=>{skyType=e.target.value;applySky()};
+document.querySelector("#resumeBtn").onclick=()=>togglePause(false);
+document.querySelector("#pauseBtn").onclick=()=>togglePause();
+document.querySelector("#menuBtn").onclick=()=>{paused=false;running=false;document.querySelector("#pauseMenu").style.display="none";document.querySelector("#menu").style.display="flex";document.querySelector("#score").style.display="none";document.querySelector("#boost").style.display="none";document.querySelector("#help").style.display="none";document.querySelector("#pauseBtn").style.display="none";refreshMobileUI()};
 document.querySelector("#start").onclick=()=>{
  perTeam=+document.querySelector("#teams").value;diff=document.querySelector("#diff").value;remaining=+document.querySelector("#duration").value;stadiumType=document.querySelector("#stadium").value;skyType=document.querySelector("#sky").value;applySky();if(matchMedia("(pointer: coarse)").matches&&screen.orientation&&screen.orientation.lock){screen.orientation.lock("landscape").catch(()=>{});}
- blue=orange=0;document.querySelector("#b").textContent=0;document.querySelector("#o").textContent=0;document.querySelector("#menu").style.display="none";document.querySelector("#score").style.display="block";document.querySelector("#boost").style.display="block";document.querySelector("#help").style.display="block";
+ blue=orange=0;document.querySelector("#b").textContent=0;document.querySelector("#o").textContent=0;document.querySelector("#menu").style.display="none";document.querySelector("#score").style.display="block";document.querySelector("#boost").style.display="block";document.querySelector("#help").style.display="block";document.querySelector("#pauseBtn").style.display="block";document.querySelector("#pauseMenu").style.display="none";paused=false;
  [...scene.children].forEach(o=>scene.remove(o));cars=[];arena();makeBall();for(let t=0;t<2;t++)for(let i=0;i<perTeam;i++)cars.push(car(t,!(t==0&&i==0),i));resetBall();running=true;matchStartVoice();refreshMobileUI()
 };
 init();
