@@ -53,7 +53,7 @@ button:hover{background:#4387ff}
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
 
 let scene,camera,renderer,clock,ball,cars=[],running=false,ballCam=false;
-let blue=0,orange=0,remaining=300,lastGoal=0,perTeam=1,diff="normal",carType="balanced";
+let blue=0,orange=0,remaining=300,lastGoal=0,perTeam=1,diff="normal",carType="balanced"; let stadiumScoreTextures=[];
 const K={}; addEventListener("keydown",e=>{K[e.key.toLowerCase()]=1;if([" ","arrowup","arrowdown","arrowleft","arrowright"].includes(e.key.toLowerCase()))e.preventDefault();if(e.key.toLowerCase()=="c")ballCam=!ballCam;if(e.key.toLowerCase()=="r"&&ball)resetBall()});
 addEventListener("keyup",e=>K[e.key.toLowerCase()]=0);
 addEventListener("blur",()=>{for(const k in K)K[k]=0;document.querySelectorAll(".touch-btn.pressed").forEach(b=>b.classList.remove("pressed"))});
@@ -222,12 +222,41 @@ function stadiumDecor(){
    glow.position.set(x,7.6,z);scene.add(glow);
   }
  }
+ // Giant in-world LED scoreboards at both ends of the arena.
+ stadiumScoreTextures=[];
+ for(const side of [-1,1]){
+  const casing=new THREE.Mesh(new THREE.BoxGeometry(9.2,3.7,.38),mat(0x080f20));
+  casing.position.set(0,6.9,side*18.35);casing.castShadow=true;scene.add(casing);
+  const canvas=document.createElement("canvas");canvas.width=768;canvas.height=320;
+  const ctx=canvas.getContext("2d");
+  const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+  stadiumScoreTextures.push({canvas,ctx,texture,side});
+  const screen=new THREE.Mesh(new THREE.PlaneGeometry(8.7,3.2),new THREE.MeshBasicMaterial({map:texture}));
+  screen.position.set(0,6.9,side*18.13);
+  if(side>0)screen.rotation.y=Math.PI;
+  scene.add(screen);
+ }
+ drawStadiumScores();
  // Elevated neon rails frame the futuristic arena without covering the field.
  for(const side of [-1,1]){
   const rail=new THREE.Mesh(new THREE.BoxGeometry(.14,.14,29),side<0?blueGlow:orangeGlow);
   rail.position.set(side*28.4,5.0,0);scene.add(rail);
  }
 }
+function drawStadiumScores(){
+ for(const board of stadiumScoreTextures){
+  const {ctx,canvas,texture,side}=board;
+  const g=ctx.createLinearGradient(0,0,canvas.width,canvas.height);
+  g.addColorStop(0,"#07172e");g.addColorStop(1,"#170d2b");
+  ctx.fillStyle=g;ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle=side<0?"#168cff":"#ff7022";ctx.lineWidth=10;ctx.strokeRect(8,8,canvas.width-16,canvas.height-16);
+  ctx.textAlign="center";ctx.fillStyle="#eaf7ff";ctx.font="bold 43px Arial";ctx.fillText("NEON CARBALL",384,67);
+  ctx.font="bold 90px Arial";ctx.fillStyle="#168cff";ctx.fillText(String(blue),240,190);
+  ctx.fillStyle="#ffffff";ctx.font="bold 55px Arial";ctx.fillText("—",384,184);
+  ctx.fillStyle="#ff7022";ctx.font="bold 90px Arial";ctx.fillText(String(orange),528,190);
+  ctx.font="bold 25px Arial";ctx.fillStyle="#b7cce8";ctx.fillText("BLUE                 ORANGE",384,260);
+  texture.needsUpdate=true;
+ }
 function goal(side){
  const z=side*14, c=side<0?0x168cff:0xff7022,m=mat(c);
  // Solid 3D frame with rounded-looking reinforced posts and crossbar.
@@ -363,7 +392,7 @@ function collisions(){
  });
 }
 function score(team){
- if(performance.now()-lastGoal<1200)return;lastGoal=performance.now();team?orange++:blue++;document.querySelector("#b").textContent=blue;document.querySelector("#o").textContent=orange;
+ if(performance.now()-lastGoal<1200)return;lastGoal=performance.now();team?orange++:blue++;document.querySelector("#b").textContent=blue;document.querySelector("#o").textContent=orange;drawStadiumScores();
  const f=document.querySelector("#flash");f.textContent="BUT !";f.style.display="block";setTimeout(()=>{f.style.display="none";resetBall()},800)
 }
 function cam(dt){
