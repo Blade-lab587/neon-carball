@@ -13,6 +13,18 @@ canvas{display:block;touch-action:none}html,body{touch-action:manipulation;-webk
 #fill{height:100%;width:100%;background:#39dfff}
 #help{left:18px;bottom:18px;font-size:13px;display:none}
 #menu{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 35%,#1b315e,#050812 65%)}
+/* Le menu reste accessible même quand la fenêtre est basse : le panneau peut défiler. */
+#menu{overflow-y:auto;overscroll-behavior:contain;padding:12px 0}
+@media(max-height:760px){
+ #menu{align-items:flex-start}
+ .panel{padding:18px}
+ h1{font-size:32px}
+ .sub{margin:4px 0 12px}
+ label{margin:8px 0 4px}
+ #carInfo{margin-top:8px;padding:8px}
+ #menu select,#menu button{padding:10px}
+ #menu button{margin-top:14px}
+}
 .panel{width:min(560px,92vw);padding:32px;border:1px solid #4d6596;border-radius:24px;background:rgba(7,12,26,.95);box-shadow:0 25px 100px #000}
 h1{font-size:44px;margin:0}.sub{color:#91a8db;margin:5px 0 24px}
 label{display:block;color:#b8c8ef;margin:14px 0 6px}
