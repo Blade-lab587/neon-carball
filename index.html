@@ -195,15 +195,45 @@ function human(c,dt){
  else if(K.shift&&c.userData.onGround){c.userData.vel.y=8;c.userData.onGround=false;c.userData.jumps=1}
 }
 function ai(c,dt){
- const d=c.userData,to=ball.mesh.position.clone().sub(c.position);to.y=0;
- const dist=to.length();const want=Math.atan2(to.x,to.z),dif=Math.atan2(Math.sin(want-d.yaw),Math.cos(want-d.yaw));
- let steer=Math.max(-1,Math.min(1,dif*2.2));
+ const d=c.userData,bp=ball.mesh.position;
+ const attackDir=d.team===0?1:-1;
+ const teammates=cars.filter(x=>x.userData.team===d.team);
+ const ranked=teammates.filter(x=>x.userData.ai).sort((a,b)=>{
+  const ap=a.position.distanceToSquared(new THREE.Vector3(bp.x,0,bp.z));
+  const bp2=b.position.distanceToSquared(new THREE.Vector3(bp.x,0,bp.z));
+  return ap-bp2;
+ });
+ const attacker=ranked[0]===c;
+ const rank=Math.max(0,ranked.indexOf(c));
+ let tx,tz;
+ if(attacker){
+  // Approach from behind the ball, facing the opponent's goal.
+  tx=bp.x;
+  tz=bp.z-attackDir*2.3;
+ }else{
+  // Teammates spread out and stay goal-side instead of chasing the same ball.
+  const lane=(rank%2===0?-1:1)*(3.8+Math.floor(rank/2)*1.4);
+  tx=bp.x*.58+lane;
+  tz=bp.z-attackDir*(5.5+Math.floor(rank/2)*2.5);
+  tx=Math.max(-22,Math.min(22,tx));
+  if(d.team===0)tz=Math.min(-1.5,tz);
+  else tz=Math.max(1.5,tz);
+ }
+ const to=new THREE.Vector3(tx-c.position.x,0,tz-c.position.z);
+ const dist=to.length();
+ const want=Math.atan2(to.x,to.z);
+ const dif=Math.atan2(Math.sin(want-d.yaw),Math.cos(want-d.yaw));
+ const steer=Math.max(-1,Math.min(1,dif*2.15));
  const skill=diff==="easy"?.72:diff==="hard"?1.12:.92;
- let throttle=Math.abs(dif)<1.55?1:.2;
- if(dist<3.5)throttle=1;
- const useBoost=diff!=="easy"&&d.boost>35&&dist>8&&Math.abs(dif)<.25;
+ let throttle=Math.abs(dif)<1.65?1:.18;
+ if(dist<2.8)throttle=1;
+ // Support players become more aggressive when the ball reaches their half.
+ const ballOnOwnHalf=d.team===0?bp.z<0:bp.z>0;
+ if(!attacker&&ballOnOwnHalf&&dist<12)throttle=1;
+ const useBoost=diff!=="easy"&&d.boost>35&&dist>8&&Math.abs(dif)<.3;
  drive(c,throttle,steer,useBoost,dt*skill);
- if(d.onGround&&ball.mesh.position.y>2.2&&dist<6&&Math.abs(dif)<.65){d.vel.y=8;d.onGround=false;d.jumps=1}
+ const ballDist=Math.hypot(bp.x-c.position.x,bp.z-c.position.z);
+ if(d.onGround&&bp.y>2.2&&ballDist<6&&Math.abs(dif)<.75){d.vel.y=8;d.onGround=false;d.jumps=1}
 }
 function ballPhysics(dt){
  const r=ball.radius;
