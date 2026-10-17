@@ -86,6 +86,7 @@ function togglePause(force){if(!running)return;paused=typeof force==="boolean"?f
 const K={}; addEventListener("keydown",e=>{const key=e.key.toLowerCase();if(key==="p"||key==="escape"){e.preventDefault();if(!e.repeat)togglePause();return}K[key]=1;if([" ","arrowup","arrowdown","arrowleft","arrowright"].includes(key))e.preventDefault();if(key==="c")ballCam=!ballCam;if(key==="r"&&ball)resetBall()});
 addEventListener("keyup",e=>K[e.key.toLowerCase()]=0);
 addEventListener("blur",()=>{for(const k in K)K[k]=0;document.querySelectorAll(".touch-btn.pressed").forEach(b=>b.classList.remove("pressed"))});
+document.addEventListener("visibilitychange",()=>{if(document.hidden){for(const k in K)K[k]=0;document.querySelectorAll(".touch-btn.pressed").forEach(b=>b.classList.remove("pressed"));if(running&&!paused)togglePause(true)}});
 function refreshMobileUI(){
  const active=running&&!paused&&matchMedia("(pointer: coarse)").matches;
  document.querySelector("#mobileControls").classList.toggle("active",active);
