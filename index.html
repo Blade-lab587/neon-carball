@@ -149,6 +149,17 @@ function car(team,ai,index){
  const cabinW=type==='rampage'?1.42:type==='phantom'?1.18:1.28;
  const cabin=new THREE.Mesh(new THREE.BoxGeometry(cabinW,.5,type==='speed'||type==='nova'?1.45:1.28),new THREE.MeshStandardMaterial({color:0x101728,metalness:.85,roughness:.12}));cabin.position.set(0,1.08,.15);cabin.castShadow=true;g.add(cabin);
  const roof=new THREE.Mesh(new THREE.BoxGeometry(cabinW*.84,.08,type==='speed'||type==='nova'?1.2:1.05),new THREE.MeshBasicMaterial({color:accent}));roof.position.set(0,1.35,.15);g.add(roof);
+ // Glazed windshields and small hood vents add readable automotive detail without changing handling.
+ const glassMat=new THREE.MeshStandardMaterial({color:0x142c43,metalness:.72,roughness:.16,emissive:0x061d32,emissiveIntensity:.55,transparent:true,opacity:.92});
+ const frontGlass=new THREE.Mesh(new THREE.BoxGeometry(cabinW*.78,.27,.055),glassMat);frontGlass.position.set(0,1.19,.69);frontGlass.rotation.x=-.34;g.add(frontGlass);
+ const rearGlass=new THREE.Mesh(new THREE.BoxGeometry(cabinW*.72,.22,.05),glassMat);rearGlass.position.set(0,1.18,-.39);rearGlass.rotation.x=.32;g.add(rearGlass);
+ const ventMat=new THREE.MeshStandardMaterial({color:0x101722,metalness:.8,roughness:.3});
+ for(const x of [-.43,.43]){const vent=new THREE.Mesh(new THREE.BoxGeometry(.13,.025,.36),ventMat);vent.position.set(x,1.105,1.19);g.add(vent)}
+ // Side air intakes follow each chassis width and glow with the selected car accent.
+ for(const side of [-1,1]){
+  const intake=new THREE.Mesh(new THREE.BoxGeometry(.055,.19,.42),new THREE.MeshStandardMaterial({color:0x111925,metalness:.65,roughness:.35}));intake.position.set(side*(bodySize[0]/2+.018),.76,.18);g.add(intake);
+  const intakeLine=new THREE.Mesh(new THREE.BoxGeometry(.065,.035,.3),new THREE.MeshBasicMaterial({color:accent}));intakeLine.position.set(side*(bodySize[0]/2+.05),.76,.18);g.add(intakeLine);
+ }
  const wingW=type==='rampage'?2.85:type==='phantom'?2.2:2.45;
  const wing=new THREE.Mesh(new THREE.BoxGeometry(wingW,.12,type==='speed'?.7:.52),mat(teamColor));wing.position.set(0,type==='heavy'?.9:.84,-1.65);wing.castShadow=true;g.add(wing);
  const bumper=new THREE.Mesh(new THREE.BoxGeometry(type==='rampage'?2.25:1.9,type==='rampage'?.28:.18,.25),new THREE.MeshBasicMaterial({color:accent}));bumper.position.set(0,type==='rampage'?.62:.58,frontZ);g.add(bumper);
