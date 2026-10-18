@@ -729,7 +729,7 @@ function collisions(dt){
 }
 function score(team){
  if(performance.now()-lastGoal<1200)return;lastGoal=performance.now();team?orange++:blue++;document.querySelector("#b").textContent=blue;document.querySelector("#o").textContent=orange;drawStadiumScores();
- speakMatch(team?"BUT POUR "+orangeName+" ! Quel tir !":"BUUUT POUR "+blueName+" ! Magnifique action !",team?"GOAL FOR "+orangeName+"! What a strike!":"GOAL FOR "+blueName+"! What a finish!");
+ speakMatch(team?"BUUUT ! "+orangeName+" ouvre le score ! Quelle finition !":"BUUUT ! "+blueName+" trouve le chemin des filets ! Magnifique !",team?"GOAL! "+orangeName+" find the net! What a finish!":"GOAL! "+blueName+" hit the back of the net! Brilliant!");
  const f=document.querySelector("#flash");f.textContent="BUT !";f.style.display="block";setTimeout(()=>{f.style.display="none";resetBall()},800)
 }
 function cam(dt){
