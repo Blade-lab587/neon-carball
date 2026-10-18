@@ -158,7 +158,7 @@ async function buyUpgrade(type) {
   if (!data?.success) throw new Error("Achat non confirmé.");
   walletCoins = data.coins; playerUpgrades[type] = data.level;
   renderGarage();
-  setGarageStatus("Amélioration achetée ! Niveau " + data.level + " (−" + data.cost + " pièces).");
+  setGarageStatus("Amélioration achetée ! Niveau " + data.level + " (−" + data.cost + " pièces). Effet appliqué à la voiture sélectionnée.");
  } catch (e) {
   setGarageStatus("Achat impossible : " + (e.message || "erreur inconnue"), true);
   await loadGarage();
@@ -578,13 +578,18 @@ function resetBall(){
  cars.forEach(c=>{const d=c.userData,s=d.team?1:-1;d.vel.set(0,0,0);d.yaw=d.team?Math.PI:0;d.jumps=0;d.boost=100;d.hitCooldown=0;c.position.set((d.index-(perTeam-1)/2)*4,0,s*8);c.rotation.y=d.yaw});
 }
 function drive(c,th,st,boost,dt){
- const d=c.userData,p=cfg[carType],f=new THREE.Vector3(Math.sin(d.yaw),0,Math.cos(d.yaw)),r=new THREE.Vector3(Math.cos(d.yaw),0,-Math.sin(d.yaw));
+ const d=c.userData,base=cfg[carType]||cfg.balanced;
+ // Les améliorations ne s'appliquent qu'à la voiture du joueur connecté.
+ const isPlayerCar=c===cars[0],up=isPlayerCar?playerUpgrades:{engine:0,boost:0,handling:0};
+ const p={...base,acc:base.acc*(1+(up.engine||0)*.08),max:base.max*(1+(up.engine||0)*.035),turn:base.turn*(1+(up.handling||0)*.10)};
+ const f=new THREE.Vector3(Math.sin(d.yaw),0,Math.cos(d.yaw)),r=new THREE.Vector3(Math.cos(d.yaw),0,-Math.sin(d.yaw));
  const speed=d.vel.length(),fs=d.vel.dot(f),ss=d.vel.dot(r);
  d.vel.addScaledVector(f,th*p.acc*dt);d.vel.addScaledVector(r,-ss*Math.min(1,7*dt));
  if(Math.abs(th)<.05)d.vel.multiplyScalar(Math.pow(.985,dt*60));
  const limit=p.max+(boost?9:0);if(d.vel.length()>limit)d.vel.setLength(limit);
  const turnFactor=.35+Math.min(speed/p.max,1);d.yaw+=st*(p.turn+speed*.055)*turnFactor*dt;c.rotation.y=d.yaw;
- if(boost&&d.boost>0&&th>0){d.vel.addScaledVector(f,42*dt);d.boost=Math.max(0,d.boost-34*dt);d.flame.visible=true;d.flame.scale.setScalar(.8+Math.random()*.5)}else{d.boost=Math.min(100,d.boost+10*dt);d.flame.visible=false}
+ const boostLevel=up.boost||0;
+ if(boost&&d.boost>0&&th>0){d.vel.addScaledVector(f,42*(1+boostLevel*.12)*dt);d.boost=Math.max(0,d.boost-34*(1-boostLevel*.06)*dt);d.flame.visible=true;d.flame.scale.setScalar(.8+Math.random()*.5)}else{d.boost=Math.min(100,d.boost+10*dt);d.flame.visible=false}
  d.vel.y-=22*dt;c.position.addScaledVector(d.vel,dt);
  if(c.position.y<0){c.position.y=0;d.vel.y=0;d.onGround=true}else d.onGround=false;
  c.position.x=Math.max(-19.2,Math.min(19.2,c.position.x));c.position.z=Math.max(-12.6,Math.min(12.6,c.position.z));
