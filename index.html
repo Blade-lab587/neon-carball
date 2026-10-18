@@ -250,7 +250,7 @@ supabase.auth.onAuthStateChange((_event, session) => renderAccount(session));
 
 let scene,camera,renderer,clock,ball,cars=[],running=false,paused=false,ballCam=false;
 let blue=0,orange=0,remaining=300,lastGoal=0,perTeam=1,diff="normal",carType="balanced"; let blueName="NEON BLUE",orangeName="TURBO ORANGE",blueColor=0x168cff,orangeColor=0xff6d20; let stadiumScoreTextures=[];let stadiumType="neon",skyType="night";
-let voiceLang="fr",commentaryClock=0,lastCommentary=0,lastCarVoice=0,lastEventVoice=0,lastHeightState=false,lastPressureState=0,lastBallSpeed=0;
+let voiceLang="fr",commentaryClock=0,lastCommentary=0,lastCarVoice=0,lastEventVoice=0,lastHeightState=false,lastPressureState=0,lastBallSpeed=0,lastCounterPressure=0,lastFinalCall=false,lastNearMiss=0;
 const voiceSupported=("speechSynthesis" in window)&&("SpeechSynthesisUtterance" in window);
 function speakMatch(fr,en,forceLang){
  if(!voiceSupported)return;
@@ -266,15 +266,19 @@ function speakMatch(fr,en,forceLang){
   synth.speak(u);lastEventVoice=performance.now();
  }catch(e){}
 }
-function matchStartVoice(){commentaryClock=0;lastCommentary=0;lastHeightState=false;lastPressureState=0;lastBallSpeed=0;speakMatch("C'est parti pour NEON CARBALL ! Les deux équipes sont en place, le coup d'envoi est donné !","And we're off in NEON CARBALL! Both teams are ready and the kickoff is underway!","fr");}
+function matchStartVoice(){commentaryClock=0;lastCommentary=0;lastHeightState=false;lastPressureState=0;lastBallSpeed=0;lastCounterPressure=0;lastFinalCall=false;lastNearMiss=0;speakMatch("C'est parti pour NEON CARBALL ! Les deux équipes sont en place, le coup d'envoi est donné !","And we're off in NEON CARBALL! Both teams are ready and the kickoff is underway!","fr");}
 function commentaryVoice(dt){
  if(!ball||!running)return;
  commentaryClock+=dt;
  const p=ball.mesh.position,speed=ball.vel.length(),airborne=p.y>3.25,pressure=Math.abs(p.z)>8.5?Math.sign(p.z):0;
- if(airborne&&!lastHeightState&&commentaryClock-lastCommentary>4){lastCommentary=commentaryClock;speakMatch("La balle s'envole ! Il peut y avoir un duel aérien !","The ball is up! We could have an aerial challenge!");}
+ const nearGoal=Math.abs(p.z)>10.4&&Math.abs(p.x)<5.4;
+ if(!lastFinalCall&&remaining<=10&&remaining>0){lastFinalCall=true;lastCommentary=commentaryClock;speakMatch("Les dix dernières secondes ! Il faut tout donner !","Ten seconds to go! Everything on the line!");}
+ else if(nearGoal&&speed>10&&commentaryClock-lastNearMiss>7&&commentaryClock-lastCommentary>4){lastNearMiss=commentaryClock;lastCommentary=commentaryClock;speakMatch("Ça passe tout près ! Quelle occasion, mais le ballon n'est pas au fond !","So close! What a chance, but the ball stays out!");}
+ else if(airborne&&!lastHeightState&&commentaryClock-lastCommentary>4){lastCommentary=commentaryClock;speakMatch("La balle s'envole ! Il peut y avoir un duel aérien !","The ball is up! We could have an aerial challenge!");}
  else if(pressure!==0&&pressure!==lastPressureState&&commentaryClock-lastCommentary>5){lastCommentary=commentaryClock;speakMatch(pressure>0?"Danger devant le but orange ! La défense doit intervenir !":"Grosse occasion devant le but bleu ! Ça chauffe !",pressure>0?"Danger around the orange goal! The defence has to react!":"A big chance at the blue goal! Things are heating up!");}
+ else if(lastCounterPressure!==0&&pressure!==0&&pressure!==lastCounterPressure&&commentaryClock-lastCommentary>5){lastCommentary=commentaryClock;speakMatch("Renversement rapide ! Ça peut partir en contre-attaque !","Quick turnover! This could be a counterattack!");}
  else if(speed>17&&lastBallSpeed<=17&&commentaryClock-lastCommentary>4){lastCommentary=commentaryClock;speakMatch("Quelle frappe ! La balle part à toute vitesse !","What a strike! The ball is flying at pace!");}
- lastHeightState=airborne;lastPressureState=pressure;lastBallSpeed=speed;
+ lastHeightState=airborne;if(pressure!==0)lastCounterPressure=pressure;lastPressureState=pressure;lastBallSpeed=speed;
  if(commentaryClock-lastCommentary<16)return;lastCommentary=commentaryClock;
  if(blue===orange)speakMatch("Toujours "+blue+" partout. Tout reste à jouer, aucune équipe ne lâche !","Still "+blue+" all. It's all to play for and neither side is giving an inch!");
  else if(Math.abs(blue-orange)<=1)speakMatch("Le score est de "+blue+" à "+orange+". Rien n'est joué, chaque action compte !","It's "+blue+" to "+orange+". Nothing is settled; every play matters!");
@@ -729,7 +733,7 @@ function collisions(dt){
 }
 function score(team){
  if(performance.now()-lastGoal<1200)return;lastGoal=performance.now();team?orange++:blue++;document.querySelector("#b").textContent=blue;document.querySelector("#o").textContent=orange;drawStadiumScores();
- speakMatch(team?"BUUUT ! "+orangeName+" ouvre le score ! Quelle finition !":"BUUUT ! "+blueName+" trouve le chemin des filets ! Magnifique !",team?"GOAL! "+orangeName+" find the net! What a finish!":"GOAL! "+blueName+" hit the back of the net! Brilliant!");
+ speakMatch(team?"BUUUT ! "+orangeName+" marque ! Quelle finition !":"BUUUT ! "+blueName+" trouve le chemin des filets ! Magnifique !",team?"GOAL! "+orangeName+" find the net! What a finish!":"GOAL! "+blueName+" hit the back of the net! Brilliant!");
  const f=document.querySelector("#flash");f.textContent="BUT !";f.style.display="block";setTimeout(()=>{f.style.display="none";resetBall()},800)
 }
 function cam(dt){
