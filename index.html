@@ -69,6 +69,7 @@ button:hover{background:#4387ff}
 <label for="playerEmail" style="margin:8px 0 4px">E-mail</label><input id="playerEmail" type="email" autocomplete="email" placeholder="joueur@exemple.com" style="width:100%;padding:10px;border-radius:9px;border:1px solid #435a8c;background:#111b31;color:#fff">
 <label for="playerPassword" style="margin:8px 0 4px">Mot de passe</label><input id="playerPassword" type="password" minlength="6" autocomplete="current-password" placeholder="6 caractères minimum" style="width:100%;padding:10px;border-radius:9px;border:1px solid #435a8c;background:#111b31;color:#fff">
 <div style="display:flex;gap:8px;margin-top:8px"><button id="signUpBtn" type="button" style="margin:0;padding:10px;font-size:13px">CRÉER UN COMPTE</button><button id="signInBtn" type="button" style="margin:0;padding:10px;font-size:13px;background:#202c45;border:1px solid #52648a">CONNEXION</button></div>
+<button id="saveProfileBtn" type="button" style="display:none;margin-top:8px;padding:9px;font-size:13px;background:#176b62">SAUVEGARDER LE PSEUDO</button>
 <button id="signOutBtn" type="button" style="display:none;margin-top:8px;padding:9px;font-size:13px;background:#202c45">SE DÉCONNECTER</button>
 <div id="accountMessage" role="status" aria-live="polite" style="font-size:12px;color:#b8c8ef;margin-top:8px;line-height:1.4">Connecte-toi pour préparer la sauvegarde de ta progression.</div></div>
 <button id="start">JOUER</button>
@@ -90,15 +91,22 @@ function setAccountMessage(message, isError=false) {
  accountMessage.textContent = message;
  accountMessage.style.color = isError ? "#ff9b9b" : "#b8c8ef";
 }
-function renderAccount(session) {
+async function renderAccount(session) {
  activeUser = session?.user || null;
  document.querySelector("#accountState").textContent = activeUser ? "Connecté" : "Non connecté";
  document.querySelector("#signUpBtn").style.display = activeUser ? "none" : "block";
  document.querySelector("#signInBtn").style.display = activeUser ? "none" : "block";
  document.querySelector("#signOutBtn").style.display = activeUser ? "block" : "none";
+ document.querySelector("#saveProfileBtn").style.display = activeUser ? "block" : "none";
  if (activeUser) {
   document.querySelector("#playerName").value = activeUser.user_metadata?.display_name || "";
-  setAccountMessage("Connecté : " + (activeUser.email || "compte joueur") + ". La sauvegarde de progression sera ajoutée à l’étape suivante.");
+  setAccountMessage("Chargement du profil joueur…");
+  const { data, error } = await supabase.from("profiles").select("display_name").eq("id", activeUser.id).maybeSingle();
+  if (!activeUser) return;
+  if (data?.display_name) document.querySelector("#playerName").value = data.display_name;
+  setAccountMessage(error
+   ? "Connecté, mais profil non chargé : " + error.message
+   : "Connecté : " + (activeUser.email || "compte joueur") + ". Ton profil est prêt.");
  }
 }
 document.querySelector("#signUpBtn").addEventListener("click", async () => {
@@ -121,6 +129,21 @@ document.querySelector("#signInBtn").addEventListener("click", async () => {
  const button = document.querySelector("#signInBtn"); button.disabled = true; setAccountMessage("Connexion en cours…");
  try { const { data, error } = await supabase.auth.signInWithPassword({ email, password }); if (error) throw error; renderAccount(data.session); }
  catch (e) { setAccountMessage(e.message || "Connexion impossible.", true); }
+ finally { button.disabled = false; }
+});
+document.querySelector("#saveProfileBtn").addEventListener("click", async () => {
+ if (!activeUser) return setAccountMessage("Connecte-toi pour sauvegarder ton profil.", true);
+ const display_name = document.querySelector("#playerName").value.trim();
+ if (!display_name) return setAccountMessage("Choisis un pseudo avant de sauvegarder.", true);
+ const button = document.querySelector("#saveProfileBtn");
+ button.disabled = true; setAccountMessage("Sauvegarde du pseudo…");
+ try {
+  const { error } = await supabase.from("profiles").update({ display_name }).eq("id", activeUser.id);
+  if (error) throw error;
+  const { error: authError } = await supabase.auth.updateUser({ data: { display_name } });
+  if (authError) throw authError;
+  setAccountMessage("Pseudo sauvegardé dans ton compte !");
+ } catch (e) { setAccountMessage("Sauvegarde impossible : " + (e.message || "erreur inconnue"), true); }
  finally { button.disabled = false; }
 });
 document.querySelector("#signOutBtn").addEventListener("click", async () => {
