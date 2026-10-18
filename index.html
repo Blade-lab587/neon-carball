@@ -104,9 +104,19 @@ async function renderAccount(session) {
   const { data, error } = await supabase.from("profiles").select("display_name").eq("id", activeUser.id).maybeSingle();
   if (!activeUser) return;
   if (data?.display_name) document.querySelector("#playerName").value = data.display_name;
+  if (!error) {
+   const saved = activeUser.user_metadata?.game_settings;
+   if (saved && typeof saved === "object") {
+    for (const [id, key] of [["car","car"],["stadium","stadium"],["sky","sky"],["teams","teams"],["diff","diff"],["duration","duration"]]) {
+     const el = document.querySelector("#"+id), value = saved[key];
+     if (value != null && [...el.options].some(option => option.value === String(value))) el.value = String(value);
+    }
+    document.querySelector("#carInfo").textContent = carInfo[document.querySelector("#car").value] || carInfo.balanced;
+   }
+  }
   setAccountMessage(error
    ? "Connecté, mais profil non chargé : " + error.message
-   : "Connecté : " + (activeUser.email || "compte joueur") + ". Ton profil est prêt.");
+   : "Connecté : " + (activeUser.email || "compte joueur") + ". Profil et réglages prêts.");
  }
 }
 document.querySelector("#signUpBtn").addEventListener("click", async () => {
@@ -604,7 +614,28 @@ function init(){
  addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
  loop()
 }
-document.querySelector("#car").onchange=e=>{carType=e.target.value;document.querySelector("#carInfo").textContent=carInfo[carType]||carInfo.balanced};
+async function saveGameSettings() {
+ if (!activeUser) return;
+ const game_settings = {
+  car: document.querySelector("#car").value,
+  stadium: document.querySelector("#stadium").value,
+  sky: document.querySelector("#sky").value,
+  teams: document.querySelector("#teams").value,
+  diff: document.querySelector("#diff").value,
+  duration: document.querySelector("#duration").value
+ };
+ try {
+  const { error } = await supabase.auth.updateUser({ data: { ...(activeUser.user_metadata || {}), game_settings } });
+  if (error) throw error;
+  setAccountMessage("Réglages de jeu sauvegardés sur ton compte.");
+ } catch (e) {
+  setAccountMessage("Réglages non sauvegardés : " + (e.message || "erreur inconnue"), true);
+ }
+}
+for (const id of ["car","stadium","sky","teams","diff","duration"]) {
+ document.querySelector("#"+id).addEventListener("change", saveGameSettings);
+}
+document.querySelector("#car").onchange=e=>{carType=e.target.value;document.querySelector("#carInfo").textContent=carInfo[carType]||carInfo.balanced;};
 document.querySelector("#stadium").onchange=e=>{stadiumType=e.target.value};
 document.querySelector("#sky").onchange=e=>{skyType=e.target.value;applySky()};
 document.querySelector("#resumeBtn").onclick=()=>togglePause(false);
