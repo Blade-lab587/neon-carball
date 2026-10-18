@@ -82,7 +82,9 @@ button:hover{background:#4387ff}
 </div>
 <div style="font-size:11px;color:#91a8db;margin-top:7px">Améliorations pour la voiture sélectionnée.</div>
 </div>
-<button id="start">JOUER</button>
+<div id="teamBox" style="margin-top:12px;padding:12px;border:1px solid #334b78;border-radius:12px;background:#0a1325"><strong>ÉQUIPES PERSONNALISÉES</strong><label for="blueTeamName">Équipe bleue</label><input id="blueTeamName" maxlength="22" value="NEON BLUE" style="width:100%;padding:10px;background:#111b31;color:#fff"><label for="orangeTeamName">Équipe orange</label><input id="orangeTeamName" maxlength="22" value="TURBO ORANGE" style="width:100%;padding:10px;background:#111b31;color:#fff"><div style="display:flex;gap:8px"><label style="flex:1">Couleur bleue<input id="blueTeamColor" type="color" value="#168cff" style="display:block;width:100%;height:36px"></label><label style="flex:1">Couleur orange<input id="orangeTeamColor" type="color" value="#ff6d20" style="display:block;width:100%;height:36px"></label></div><small style="color:#91a8db">Noms et couleurs appliqués au match local.</small></div>
+<div id="tournamentBox" style="margin-top:12px;padding:12px;border:1px solid #334b78;border-radius:12px;background:#0a1325"><strong>MODE TOURNOI</strong><label for="tournamentSize">Format</label><select id="tournamentSize"><option value="4">4 équipes · demi-finales</option><option value="8">8 équipes · quarts de finale</option></select><label for="tournamentNames">Noms des équipes (une par ligne)</label><textarea id="tournamentNames" rows="4" style="width:100%;resize:vertical;padding:10px;background:#111b31;color:#fff" placeholder="NEON BLUE&#10;TURBO ORANGE&#10;ASTRAL FC&#10;NOVA UNITED"></textarea><button id="makeTournament" type="button" style="margin-top:8px;padding:10px">GÉNÉRER LE TABLEAU</button><div id="tournamentStatus" role="status" style="font-size:12px;color:#b8c8ef;margin-top:8px">Prépare un tableau de tournoi local.</div><div id="tournamentBracket" style="font-size:12px;line-height:1.6;margin-top:8px;white-space:pre-wrap;color:#d5e2ff"></div></div>
+<div id="onlineBox" style="margin-top:12px;padding:12px;border:1px solid #334b78;border-radius:12px;background:#0a1325"><strong>MULTIJOUEUR EN LIGNE · SALON</strong><div style="font-size:11px;color:#91a8db;margin:6px 0">Crée ou rejoins un salon et vois les joueurs connectés. Les déplacements de voitures et de balle ne sont pas encore synchronisés en match.</div><label for="roomCode">Code du salon</label><input id="roomCode" maxlength="12" placeholder="Ex. NEON7" style="width:100%;padding:10px;background:#111b31;color:#fff"><div style="display:flex;gap:8px;margin-top:8px"><button id="createRoom" type="button" style="margin:0;padding:10px;font-size:13px">CRÉER</button><button id="joinRoom" type="button" style="margin:0;padding:10px;font-size:13px;background:#202c45">REJOINDRE</button><button id="leaveRoom" type="button" style="margin:0;padding:10px;font-size:13px;background:#202c45">QUITTER</button></div><div id="roomStatus" role="status" aria-live="polite" style="font-size:12px;color:#b8c8ef;margin-top:8px">Connecte-toi pour utiliser les salons.</div><div id="roomPlayers" style="font-size:12px;color:#d5e2ff;margin-top:6px"></div></div><button id="start">JOUER</button>
 </div></div>
 <div id="score" class="ui" style="display:none"><span id="b">0</span> — <span id="o">0</span><div id="timer">5:00</div></div><button id="pauseBtn" style="display:none" aria-label="Mettre le match en pause">Ⅱ PAUSE</button><div id="pauseMenu"><div class="pause-panel"><h2>PAUSE</h2><p>Le match est suspendu.</p><button id="resumeBtn">REPRENDRE</button><button id="menuBtn">RETOUR AU MENU</button></div></div>
 <div id="boost" class="ui"><div id="fill"></div></div>
@@ -96,6 +98,7 @@ const SUPABASE_URL = "https://ujsgjsgxlzcmizkyqhka.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_qhcfHHAE4RXQl_zD0I7ayQ_Za2zFkGU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 let activeUser = null;
+let lobbyChannel = null;
 const accountMessage = document.querySelector("#accountMessage");
 function setAccountMessage(message, isError=false) {
  accountMessage.textContent = message;
@@ -246,7 +249,7 @@ supabase.auth.onAuthStateChange((_event, session) => renderAccount(session));
 
 
 let scene,camera,renderer,clock,ball,cars=[],running=false,paused=false,ballCam=false;
-let blue=0,orange=0,remaining=300,lastGoal=0,perTeam=1,diff="normal",carType="balanced"; let stadiumScoreTextures=[];let stadiumType="neon",skyType="night";
+let blue=0,orange=0,remaining=300,lastGoal=0,perTeam=1,diff="normal",carType="balanced"; let blueName="NEON BLUE",orangeName="TURBO ORANGE",blueColor=0x168cff,orangeColor=0xff6d20; let stadiumScoreTextures=[];let stadiumType="neon",skyType="night";
 let voiceLang="fr",commentaryClock=0,lastCommentary=0,lastCarVoice=0;
 const voiceSupported=("speechSynthesis" in window)&&("SpeechSynthesisUtterance" in window);
 function speakMatch(fr,en,forceLang){
@@ -326,8 +329,8 @@ const mat=c=>new THREE.MeshStandardMaterial({color:c,metalness:.55,roughness:.3}
 function car(team,ai,index){
  const g=new THREE.Group();
  const type=carType,v=cfg[type]||cfg.balanced;
- const teamColor=team?0xff6d20:0x168cff;
- const teamGlow=team?0xff9a45:0x4ddcff;
+ const teamColor=team?orangeColor:blueColor;
+ const teamGlow=team?new THREE.Color(orangeColor).lerp(new THREE.Color(0xffffff),.18).getHex():new THREE.Color(blueColor).lerp(new THREE.Color(0xffffff),.18).getHex();
  const modelGlow={balanced:teamGlow,speed:0xffe45c,heavy:0xff4d4d,phantom:0xc45cff,nova:0x6dff7a,rampage:0xff4b21,pulse:0x55fff2}[type]||teamGlow;
  const accent=team?new THREE.Color(modelGlow).offsetHSL(0,-.05,.04).getHex():modelGlow;
  const bodySize={balanced:[2.15,.52,3.45],speed:[2.02,.46,3.7],heavy:[2.45,.62,3.5],phantom:[1.95,.44,3.35],nova:[2.08,.48,3.65],rampage:[2.6,.66,3.55],pulse:[2.12,.5,3.6]}[type]||[2.15,.52,3.45];
@@ -718,7 +721,7 @@ function collisions(dt){
 }
 function score(team){
  if(performance.now()-lastGoal<1200)return;lastGoal=performance.now();team?orange++:blue++;document.querySelector("#b").textContent=blue;document.querySelector("#o").textContent=orange;drawStadiumScores();
- speakMatch(team?"BUT POUR LES ORANGE ! Quel tir !":"BUUUT POUR LES BLEUS ! Magnifique action !",team?"GOAL FOR ORANGE! What a strike!":"GOAL FOR BLUE! What a finish!");
+ speakMatch(team?"BUT POUR "+orangeName+" ! Quel tir !":"BUUUT POUR "+blueName+" ! Magnifique action !",team?"GOAL FOR "+orangeName+"! What a strike!":"GOAL FOR "+blueName+"! What a finish!");
  const f=document.querySelector("#flash");f.textContent="BUT !";f.style.display="block";setTimeout(()=>{f.style.display="none";resetBall()},800)
 }
 function cam(dt){
@@ -764,11 +767,20 @@ for (const id of ["car","stadium","sky","teams","diff","duration"]) {
 document.querySelector("#car").onchange=e=>{carType=e.target.value;document.querySelector("#carInfo").textContent=carInfo[carType]||carInfo.balanced;};
 document.querySelector("#stadium").onchange=e=>{stadiumType=e.target.value};
 document.querySelector("#sky").onchange=e=>{skyType=e.target.value;applySky()};
+
+function setRoomStatus(message,isError=false){const el=document.querySelector("#roomStatus");el.textContent=message;el.style.color=isError?"#ff9b9b":"#b8c8ef";}
+function renderRoomPlayers(){if(!lobbyChannel){document.querySelector("#roomPlayers").textContent="";return;}const state=lobbyChannel.presenceState(),names=[];for(const group of Object.values(state))for(const p of group){const name=(p&&p.name)||"Joueur";if(!names.includes(name))names.push(name);}document.querySelector("#roomPlayers").textContent="Joueurs connectés ("+names.length+"): "+(names.join(", ")||"en attente…");}
+async function connectRoom(create){if(!activeUser){setRoomStatus("Connecte-toi d’abord à ton compte.",true);return;}let code=document.querySelector("#roomCode").value.trim().toUpperCase().replace(/[^A-Z0-9-]/g,"").slice(0,12);if(create&&!code)code="NEON-"+Math.random().toString(36).slice(2,6).toUpperCase();if(!code){setRoomStatus("Saisis un code de salon.",true);return;}if(lobbyChannel){await supabase.removeChannel(lobbyChannel);lobbyChannel=null;}document.querySelector("#roomCode").value=code;lobbyChannel=supabase.channel("neon-room-"+code,{config:{presence:{key:activeUser.id}}});lobbyChannel.on("presence",{event:"sync"},renderRoomPlayers);lobbyChannel.subscribe(async status=>{if(status==="SUBSCRIBED"){const name=document.querySelector("#playerName").value.trim()||activeUser.user_metadata?.display_name||activeUser.email?.split("@")[0]||"Joueur";const result=await lobbyChannel.track({name,user_id:activeUser.id,joined_at:new Date().toISOString()});if(result==="ok"){setRoomStatus((create?"Salon créé : ":"Connecté au salon : ")+code);renderRoomPlayers();}else setRoomStatus("Salon connecté, présence en cours de synchronisation.");}else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")setRoomStatus("Connexion impossible. Vérifie la configuration Realtime Supabase.",true);});}
+document.querySelector("#createRoom").addEventListener("click",()=>connectRoom(true));
+document.querySelector("#joinRoom").addEventListener("click",()=>connectRoom(false));
+document.querySelector("#leaveRoom").addEventListener("click",async()=>{if(lobbyChannel){await supabase.removeChannel(lobbyChannel);lobbyChannel=null;}document.querySelector("#roomPlayers").textContent="";setRoomStatus("Tu as quitté le salon.");});
+document.querySelector("#makeTournament").addEventListener("click",()=>{const size=+document.querySelector("#tournamentSize").value;let names=document.querySelector("#tournamentNames").value.split(/\n|,/).map(x=>x.trim()).filter(Boolean);if(!names.length)names=[document.querySelector("#blueTeamName").value.trim()||"NEON BLUE",document.querySelector("#orangeTeamName").value.trim()||"TURBO ORANGE","ASTRAL FC","NOVA UNITED","PHANTOM RACING","VOLT CLUB","TITAN UNITED","BLAZE FC"];names=[...new Set(names)].slice(0,size);while(names.length<size)names.push("Équipe "+(names.length+1));let lines=[],current=names;while(current.length>2){lines.push(current.length===4?"DEMI-FINALES":"QUARTS DE FINALE");for(let i=0;i<current.length;i+=2)lines.push("Match "+(i/2+1)+" : "+current[i]+" vs "+current[i+1]);current=Array(current.length/2).fill(0).map((_,i)=>"Vainqueur match "+(i+1));}lines.push("FINALE",current[0]+" vs "+current[1]);document.querySelector("#tournamentBracket").textContent=lines.join("\n");document.querySelector("#tournamentStatus").textContent="Tableau généré pour "+size+" équipes. Les résultats et la progression automatique ne sont pas encore reliés aux matchs.";});
+
 document.querySelector("#resumeBtn").onclick=()=>togglePause(false);
 document.querySelector("#pauseBtn").onclick=()=>togglePause();
 document.querySelector("#menuBtn").onclick=()=>{paused=false;running=false;document.querySelector("#pauseMenu").style.display="none";document.querySelector("#menu").style.display="flex";document.querySelector("#score").style.display="none";document.querySelector("#boost").style.display="none";document.querySelector("#help").style.display="none";document.querySelector("#pauseBtn").style.display="none";refreshMobileUI()};
 document.querySelector("#start").onclick=()=>{
- perTeam=+document.querySelector("#teams").value;diff=document.querySelector("#diff").value;remaining=+document.querySelector("#duration").value;stadiumType=document.querySelector("#stadium").value;skyType=document.querySelector("#sky").value;applySky();if(matchMedia("(pointer: coarse)").matches&&screen.orientation&&screen.orientation.lock){screen.orientation.lock("landscape").catch(()=>{});}
+ blueName=document.querySelector("#blueTeamName").value.trim()||"NEON BLUE";orangeName=document.querySelector("#orangeTeamName").value.trim()||"TURBO ORANGE";blueColor=new THREE.Color(document.querySelector("#blueTeamColor").value).getHex();orangeColor=new THREE.Color(document.querySelector("#orangeTeamColor").value).getHex();perTeam=+document.querySelector("#teams").value;diff=document.querySelector("#diff").value;remaining=+document.querySelector("#duration").value;stadiumType=document.querySelector("#stadium").value;skyType=document.querySelector("#sky").value;applySky();if(matchMedia("(pointer: coarse)").matches&&screen.orientation&&screen.orientation.lock){screen.orientation.lock("landscape").catch(()=>{});}
  blue=orange=0;document.querySelector("#b").textContent=0;document.querySelector("#o").textContent=0;document.querySelector("#menu").style.display="none";document.querySelector("#score").style.display="block";document.querySelector("#boost").style.display="block";document.querySelector("#help").style.display="block";document.querySelector("#pauseBtn").style.display="block";document.querySelector("#pauseMenu").style.display="none";paused=false;
  [...scene.children].forEach(o=>scene.remove(o));cars=[];arena();makeBall();for(let t=0;t<2;t++)for(let i=0;i<perTeam;i++)cars.push(car(t,!(t==0&&i==0),i));resetBall();running=true;matchStartVoice();refreshMobileUI()
 };
