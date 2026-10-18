@@ -63,6 +63,14 @@ button:hover{background:#4387ff}
 <select id="diff"><option value="easy">Facile</option><option value="normal" selected>Normal</option><option value="hard">Difficile</option></select>
 <label>Durée</label>
 <select id="duration"><option value="180">3 minutes</option><option value="300" selected>5 minutes</option><option value="600">10 minutes</option></select>
+<div id="accountBox" style="margin-top:16px;padding:12px;border:1px solid #334b78;border-radius:12px;background:#0a1325">
+<div style="font-weight:800;margin-bottom:8px">COMPTE JOUEUR <span id="accountState" style="font-size:12px;color:#91a8db;font-weight:400">Non connecté</span></div>
+<label for="playerName" style="margin:6px 0 4px">Pseudo</label><input id="playerName" type="text" maxlength="24" autocomplete="nickname" placeholder="Ton pseudo" style="width:100%;padding:10px;border-radius:9px;border:1px solid #435a8c;background:#111b31;color:#fff">
+<label for="playerEmail" style="margin:8px 0 4px">E-mail</label><input id="playerEmail" type="email" autocomplete="email" placeholder="joueur@exemple.com" style="width:100%;padding:10px;border-radius:9px;border:1px solid #435a8c;background:#111b31;color:#fff">
+<label for="playerPassword" style="margin:8px 0 4px">Mot de passe</label><input id="playerPassword" type="password" minlength="6" autocomplete="current-password" placeholder="6 caractères minimum" style="width:100%;padding:10px;border-radius:9px;border:1px solid #435a8c;background:#111b31;color:#fff">
+<div style="display:flex;gap:8px;margin-top:8px"><button id="signUpBtn" type="button" style="margin:0;padding:10px;font-size:13px">CRÉER UN COMPTE</button><button id="signInBtn" type="button" style="margin:0;padding:10px;font-size:13px;background:#202c45;border:1px solid #52648a">CONNEXION</button></div>
+<button id="signOutBtn" type="button" style="display:none;margin-top:8px;padding:9px;font-size:13px;background:#202c45">SE DÉCONNECTER</button>
+<div id="accountMessage" role="status" aria-live="polite" style="font-size:12px;color:#b8c8ef;margin-top:8px;line-height:1.4">Connecte-toi pour préparer la sauvegarde de ta progression.</div></div>
 <button id="start">JOUER</button>
 </div></div>
 <div id="score" class="ui" style="display:none"><span id="b">0</span> — <span id="o">0</span><div id="timer">5:00</div></div><button id="pauseBtn" style="display:none" aria-label="Mettre le match en pause">Ⅱ PAUSE</button><div id="pauseMenu"><div class="pause-panel"><h2>PAUSE</h2><p>Le match est suspendu.</p><button id="resumeBtn">REPRENDRE</button><button id="menuBtn">RETOUR AU MENU</button></div></div>
@@ -71,6 +79,61 @@ button:hover{background:#4387ff}
 <div id="flash"></div>
 <script type="module">
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+const SUPABASE_URL = "https://ujsgjsgxlzcmizkyqhka.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_qhcfHHAE4RXQl_zD0I7ayQ_Za2zFkGU";
+const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+let activeUser = null;
+const accountMessage = document.querySelector("#accountMessage");
+function setAccountMessage(message, isError=false) {
+ accountMessage.textContent = message;
+ accountMessage.style.color = isError ? "#ff9b9b" : "#b8c8ef";
+}
+function renderAccount(session) {
+ activeUser = session?.user || null;
+ document.querySelector("#accountState").textContent = activeUser ? "Connecté" : "Non connecté";
+ document.querySelector("#signUpBtn").style.display = activeUser ? "none" : "block";
+ document.querySelector("#signInBtn").style.display = activeUser ? "none" : "block";
+ document.querySelector("#signOutBtn").style.display = activeUser ? "block" : "none";
+ if (activeUser) {
+  document.querySelector("#playerName").value = activeUser.user_metadata?.display_name || "";
+  setAccountMessage("Connecté : " + (activeUser.email || "compte joueur") + ". La sauvegarde de progression sera ajoutée à l’étape suivante.");
+ }
+}
+document.querySelector("#signUpBtn").addEventListener("click", async () => {
+ const email = document.querySelector("#playerEmail").value.trim();
+ const password = document.querySelector("#playerPassword").value;
+ const display_name = document.querySelector("#playerName").value.trim() || "Joueur";
+ if (!email || password.length < 6) return setAccountMessage("Saisis un e-mail valide et un mot de passe d’au moins 6 caractères.", true);
+ const button = document.querySelector("#signUpBtn"); button.disabled = true; setAccountMessage("Création du compte en cours…");
+ try {
+  const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { display_name } } });
+  if (error) throw error;
+  if (data.session) { renderAccount(data.session); setAccountMessage("Compte créé et connecté !"); }
+  else setAccountMessage("Inscription envoyée. Vérifie ta boîte e-mail pour confirmer ton compte, puis connecte-toi.");
+ } catch (e) { setAccountMessage(e.message || "Impossible de créer le compte.", true); }
+ finally { button.disabled = false; }
+});
+document.querySelector("#signInBtn").addEventListener("click", async () => {
+ const email = document.querySelector("#playerEmail").value.trim(), password = document.querySelector("#playerPassword").value;
+ if (!email || !password) return setAccountMessage("Saisis ton e-mail et ton mot de passe.", true);
+ const button = document.querySelector("#signInBtn"); button.disabled = true; setAccountMessage("Connexion en cours…");
+ try { const { data, error } = await supabase.auth.signInWithPassword({ email, password }); if (error) throw error; renderAccount(data.session); }
+ catch (e) { setAccountMessage(e.message || "Connexion impossible.", true); }
+ finally { button.disabled = false; }
+});
+document.querySelector("#signOutBtn").addEventListener("click", async () => {
+ const { error } = await supabase.auth.signOut();
+ if (error) return setAccountMessage(error.message, true);
+ renderAccount(null); setAccountMessage("Déconnexion effectuée.");
+});
+supabase.auth.getSession().then(({ data, error }) => {
+ if (error) setAccountMessage("Impossible de vérifier la session : " + error.message, true);
+ else renderAccount(data.session);
+});
+supabase.auth.onAuthStateChange((_event, session) => renderAccount(session));
+
 
 let scene,camera,renderer,clock,ball,cars=[],running=false,paused=false,ballCam=false;
 let blue=0,orange=0,remaining=300,lastGoal=0,perTeam=1,diff="normal",carType="balanced"; let stadiumScoreTextures=[];let stadiumType="neon",skyType="night";
