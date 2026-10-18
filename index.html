@@ -649,31 +649,70 @@ function ai(c,dt){
  if(d.onGround&&bp.y>2&&ballDist<jumpRange&&Math.abs(dif)<.9){d.vel.y=level===2 ? 8.5 : 7.6;d.onGround=false;d.jumps=1}
 }
 function ballPhysics(dt){
- const r=ball.radius;
- ball.vel.y-=19*dt;ball.mesh.position.addScaledVector(ball.vel,dt);
- ball.vel.x*=Math.pow(.996,dt*60);ball.vel.z*=Math.pow(.996,dt*60);
- ball.mesh.rotation.x-=ball.vel.z*dt/r;ball.mesh.rotation.z+=ball.vel.x*dt/r;
- if(ball.mesh.position.y<r){ball.mesh.position.y=r;if(ball.vel.y<0){ball.vel.y*=-.68;if(Math.abs(ball.vel.y)<1)ball.vel.y=0}ball.vel.x*=Math.pow(.91,dt*60);ball.vel.z*=Math.pow(.91,dt*60)}
- if(Math.abs(ball.mesh.position.x)>19.4){ball.mesh.position.x=Math.sign(ball.mesh.position.x)*19.4;ball.vel.x*=-.82}
- const inGoal=Math.abs(ball.mesh.position.x)<3.5&&ball.mesh.position.y<3.15;
- if(ball.mesh.position.z>14.8){if(inGoal)score(0);else{ball.mesh.position.z=13;ball.vel.z=-Math.abs(ball.vel.z)*.82}}
- else if(ball.mesh.position.z<-14.8){if(inGoal)score(1);else{ball.mesh.position.z=-13;ball.vel.z=Math.abs(ball.vel.z)*.82}}
- else {if(ball.mesh.position.z>12.95&&!inGoal){ball.mesh.position.z=12.95;ball.vel.z=-Math.abs(ball.vel.z)*.82}if(ball.mesh.position.z<-12.95&&!inGoal){ball.mesh.position.z=-12.95;ball.vel.z=Math.abs(ball.vel.z)*.82}}
+ const r=ball.radius,p=ball.mesh.position,v=ball.vel;
+ // Gravity and light aerodynamic drag keep long shots readable without
+ // making the ball float forever.
+ v.y-=18.5*dt;
+ const airDrag=Math.pow(.999,dt*60);
+ v.x*=airDrag;v.z*=airDrag;
+ p.addScaledVector(v,dt);
+ ball.mesh.rotation.x-=v.z*dt/r;
+ ball.mesh.rotation.z+=v.x*dt/r;
+ // Ground contact: speed-sensitive bounce plus rolling friction.
+ if(p.y<r){
+  p.y=r;
+  if(v.y<-.8){v.y=-v.y*.70;if(Math.abs(v.y)<1.15)v.y=0}
+  else if(v.y<0)v.y=0;
+  const roll=Math.pow(.965,dt*60);
+  v.x*=roll;v.z*=roll;
+ }
+ // Side walls absorb a little energy; clamping prevents tunnelling at speed.
+ const wallX=19.4;
+ if(p.x>wallX){p.x=wallX;if(v.x>0)v.x=-v.x*.84;v.z*=.985}
+ else if(p.x< -wallX){p.x=-wallX;if(v.x<0)v.x=-v.x*.84;v.z*=.985}
+ const inGoal=Math.abs(p.x)<3.5&&p.y<3.15;
+ // Goal-mouth opening: score only after the ball fully crosses the line.
+ if(p.z>14.8){
+  if(inGoal){score(0);return}
+  p.z=14.65;if(v.z>0)v.z=-v.z*.78;
+ }else if(p.z< -14.8){
+  if(inGoal){score(1);return}
+  p.z=-14.65;if(v.z<0)v.z=-v.z*.78;
+ }else{
+  if(p.z>12.95&&!inGoal){p.z=12.95;if(v.z>0)v.z=-v.z*.82}
+  if(p.z< -12.95&&!inGoal){p.z=-12.95;if(v.z<0)v.z=-v.z*.82}
+ }
+ // Keep extreme impacts under control while preserving powerful shots.
+ const maxSpeed=34;
+ if(v.length()>maxSpeed)v.setLength(maxSpeed);
 }
 function collisions(dt){
  cars.forEach(c=>{
   const d=c.userData;d.hitCooldown=Math.max(0,d.hitCooldown-dt);
-  const dx=ball.mesh.position.x-c.position.x,dz=ball.mesh.position.z-c.position.z,dist=Math.hypot(dx,dz);
-  if(dist<2.05&&ball.mesh.position.y<3.5&&d.hitCooldown<=0){
+  const p=ball.mesh.position,v=ball.vel;
+  const dx=p.x-c.position.x,dz=p.z-c.position.z,dist=Math.hypot(dx,dz);
+  const carRadius=1.05,combined=ball.radius+carRadius;
+  const verticalGap=p.y-(c.position.y+.65);
+  if(dist<combined&&Math.abs(verticalGap)<2.45&&d.hitCooldown<=0){
    const nx=dx/(dist||1),nz=dz/(dist||1);
-   const carAlong=d.vel.x*nx+d.vel.z*nz,ballAlong=ball.vel.x*nx+ball.vel.z*nz;
-   const closing=Math.max(0,carAlong-ballAlong);
-   const impulse=Math.max(5,Math.min(24,closing*1.35+6));
-   ball.mesh.position.x+=nx*(2.05-dist);ball.mesh.position.z+=nz*(2.05-dist);
-   ball.vel.x+=nx*impulse;ball.vel.z+=nz*impulse;
-   ball.vel.y=Math.max(ball.vel.y,2.2+Math.max(0,d.vel.y*.12));
+   const carSpeed=Math.hypot(d.vel.x,d.vel.z);
+   const carAlong=d.vel.x*nx+d.vel.z*nz;
+   const ballAlong=v.x*nx+v.z*nz;
+   const closing=carAlong-ballAlong;
+   // Only a car moving into the ball adds a strong forward impulse.
+   const impulse=Math.max(2.5,Math.min(21,Math.max(0,closing)*1.15+carSpeed*.22+2.5));
+   const overlap=combined-dist;
+   p.x+=nx*(overlap+.015);p.z+=nz*(overlap+.015);
+   v.x+=nx*impulse;v.z+=nz*impulse;
+   // Hits under the centre stay low; jumps and aerial contacts lift the ball.
+   const lift=verticalGap>.65?Math.min(8,2.2+Math.max(0,d.vel.y)*.42):verticalGap<-.35?1.2:Math.min(5.2,1.5+carSpeed*.12);
+   v.y=Math.max(v.y,lift);
+   // Add a small side-spin effect on glancing impacts.
+   const side=d.vel.x*(-nz)+d.vel.z*nx;
+   v.x+=(-nz)*side*.035;v.z+=nx*side*.035;
+   const maxSpeed=34;if(v.length()>maxSpeed)v.setLength(maxSpeed);
    if(c===cars[0]&&performance.now()-lastCarVoice>6500){lastCarVoice=performance.now();speakMatch("Je suis sur la balle ! On continue !","I am on the ball! Let us keep going!");}
-   d.hitCooldown=.09;
+   d.hitCooldown=.12;
   }
  });
 }
