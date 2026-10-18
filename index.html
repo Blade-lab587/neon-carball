@@ -605,25 +605,31 @@ function human(c,dt){
 function ai(c,dt){
  const d=c.userData,bp=ball.mesh.position;
  const attackDir=d.team===0?1:-1;
+ const level=diff==="easy"?0:diff==="hard"?2:1;
+ const skill=level===0 ? .78 : level===2 ? 1.12 : .96;
+ // Predict the ball's near-future position to intercept its movement.
+ const lead=level===0 ? .12 : level===2 ? .48 : .28;
+ const px=Math.max(-18,Math.min(18,bp.x+ball.vel.x*lead));
+ const pz=Math.max(-12.5,Math.min(12.5,bp.z+ball.vel.z*lead));
  const teammates=cars.filter(x=>x.userData.team===d.team);
  const ranked=teammates.filter(x=>x.userData.ai).sort((a,b)=>{
-  const ap=a.position.distanceToSquared(new THREE.Vector3(bp.x,0,bp.z));
-  const bp2=b.position.distanceToSquared(new THREE.Vector3(bp.x,0,bp.z));
+  const ap=a.position.distanceToSquared(new THREE.Vector3(px,0,pz));
+  const bp2=b.position.distanceToSquared(new THREE.Vector3(px,0,pz));
   return ap-bp2;
  });
  const attacker=ranked[0]===c;
  const rank=Math.max(0,ranked.indexOf(c));
  let tx,tz;
  if(attacker){
-  // Approach from behind the ball, facing the opponent's goal.
-  tx=bp.x;
-  tz=bp.z-attackDir*2.3;
+  // Attack from behind the predicted ball position toward the opponent goal.
+  tx=px-ball.vel.x*.08;
+  tz=pz-attackDir*(level===0 ? 1.8 : 1.25);
  }else{
-  // Teammates spread out and stay goal-side instead of chasing the same ball.
+  // Support cars keep different lanes and protect their own half.
   const lane=(rank%2===0?-1:1)*(3.8+Math.floor(rank/2)*1.4);
-  tx=bp.x*.58+lane;
-  tz=bp.z-attackDir*(5.5+Math.floor(rank/2)*2.5);
-  tx=Math.max(-22,Math.min(22,tx));
+  tx=px*.58+lane;
+  tz=pz-attackDir*(5+Math.floor(rank/2)*2.6);
+  tx=Math.max(-21,Math.min(21,tx));
   if(d.team===0)tz=Math.min(-1.5,tz);
   else tz=Math.max(1.5,tz);
  }
@@ -631,17 +637,16 @@ function ai(c,dt){
  const dist=to.length();
  const want=Math.atan2(to.x,to.z);
  const dif=Math.atan2(Math.sin(want-d.yaw),Math.cos(want-d.yaw));
- const steer=Math.max(-1,Math.min(1,dif*2.15));
- const skill=diff==="easy"?.72:diff==="hard"?1.12:.92;
- let throttle=Math.abs(dif)<1.65?1:.18;
- if(dist<2.8)throttle=1;
- // Support players become more aggressive when the ball reaches their half.
+ const steer=Math.max(-1,Math.min(1,dif*(level===2 ? 2.7 : 2.15)));
+ let throttle=Math.abs(dif)<(level===2 ? 1.9 : 1.55) ? 1 : .12;
+ if(dist<3.4)throttle=1;
  const ballOnOwnHalf=d.team===0?bp.z<0:bp.z>0;
- if(!attacker&&ballOnOwnHalf&&dist<12)throttle=1;
- const useBoost=diff!=="easy"&&d.boost>35&&dist>8&&Math.abs(dif)<.3;
+ if(!attacker&&ballOnOwnHalf&&dist<14)throttle=1;
+ const useBoost=level>0&&d.boost>24&&dist>(level===2 ? 5.5 : 8)&&Math.abs(dif)<(level===2 ? .58 : .34);
  drive(c,throttle,steer,useBoost,dt*skill);
  const ballDist=Math.hypot(bp.x-c.position.x,bp.z-c.position.z);
- if(d.onGround&&bp.y>2.2&&ballDist<6&&Math.abs(dif)<.75){d.vel.y=8;d.onGround=false;d.jumps=1}
+ const jumpRange=level===2 ? 7 : level===1 ? 5.5 : 4.5;
+ if(d.onGround&&bp.y>2&&ballDist<jumpRange&&Math.abs(dif)<.9){d.vel.y=level===2 ? 8.5 : 7.6;d.onGround=false;d.jumps=1}
 }
 function ballPhysics(dt){
  const r=ball.radius;
@@ -683,7 +688,7 @@ function cam(dt){
  camera.position.lerp(p,1-Math.pow(.001,dt));camera.lookAt(target.x,target.y+1,target.z)
 }
 function fmt(s){s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
-function loop(){requestAnimationFrame(loop);refreshMobileUI();const dt=Math.min(clock.getDelta(),.033);if(running&&!paused){remaining-=dt;commentaryVoice(dt);document.querySelector("#timer").textContent=fmt(remaining);cars.forEach((c,i)=>i?ai(c,dt):human(c,dt));ballPhysics(dt);collisions(dt);cam(dt);document.querySelector("#fill").style.width=cars[0].userData.boost+"%";if(remaining<=0){running=false;speakMatch("Fin du match ! Score final : "+blue+" à "+orange+". Merci de jouer !","Full time! Final score: "+blue+" to "+orange+". Thanks for playing!");document.querySelector("#flash").innerHTML="FIN DU MATCH<br><small>"+blue+" — "+orange+"</small>";document.querySelector("#flash").style.display="block";setTimeout(()=>{document.querySelector("#flash").style.display="none";document.querySelector("#menu").style.display="flex";document.querySelector("#score").style.display="none";document.querySelector("#boost").style.display="none";document.querySelector("#help").style.display="none";document.querySelector("#pauseBtn").style.display="none";document.querySelector("#pauseMenu").style.display="none";paused=false},2200)}}renderer.render(scene,camera)}
+function loop(){requestAnimationFrame(loop);refreshMobileUI();const dt=Math.min(clock.getDelta(),.033);if(running&&!paused){remaining-=dt;commentaryVoice(dt);document.querySelector("#timer").textContent=fmt(remaining);cars.forEach((c,i)=>i?ai(c,dt):human(c,dt));ballPhysics(dt);collisions(dt);cam(dt);document.querySelector("#fill").style.width=cars[0].userData.boost+"%";if(remaining<=0){running=false;speakMatch("Fin du match ! Score final : "+blue+" à "+orange+". Merci de jouer !","Full time! Final score: "+blue+" to "+orange+". Thanks for playing!");const verdict=blue>orange?"VICTOIRE !":blue<orange?"DÉFAITE":"MATCH NUL";document.querySelector("#flash").innerHTML=verdict+"<br><small>FIN DU MATCH · "+blue+" — "+orange+"</small>";document.querySelector("#flash").style.display="block";setTimeout(()=>{document.querySelector("#flash").style.display="none";document.querySelector("#menu").style.display="flex";document.querySelector("#score").style.display="none";document.querySelector("#boost").style.display="none";document.querySelector("#help").style.display="none";document.querySelector("#pauseBtn").style.display="none";document.querySelector("#pauseMenu").style.display="none";paused=false},2200)}}renderer.render(scene,camera)}
 function applySky(){
  if(!scene)return;
  const sky={night:{bg:0x050914,fog:0x050914},sunset:{bg:0x3b1837,fog:0x3b1837},day:{bg:0x73b8e8,fog:0x73b8e8}}[skyType]||{bg:0x050914,fog:0x050914};
