@@ -250,30 +250,38 @@ supabase.auth.onAuthStateChange((_event, session) => renderAccount(session));
 
 let scene,camera,renderer,clock,ball,cars=[],running=false,paused=false,ballCam=false;
 let blue=0,orange=0,remaining=300,lastGoal=0,perTeam=1,diff="normal",carType="balanced"; let blueName="NEON BLUE",orangeName="TURBO ORANGE",blueColor=0x168cff,orangeColor=0xff6d20; let stadiumScoreTextures=[];let stadiumType="neon",skyType="night";
-let voiceLang="fr",commentaryClock=0,lastCommentary=0,lastCarVoice=0;
+let voiceLang="fr",commentaryClock=0,lastCommentary=0,lastCarVoice=0,lastEventVoice=0,lastHeightState=false,lastPressureState=0,lastBallSpeed=0;
 const voiceSupported=("speechSynthesis" in window)&&("SpeechSynthesisUtterance" in window);
 function speakMatch(fr,en,forceLang){
  if(!voiceSupported)return;
  const lang=forceLang||voiceLang;voiceLang=lang==="fr"?"en":"fr";
  try{
-  const synth=window.speechSynthesis;synth.cancel();
+  const synth=window.speechSynthesis;
+  if(synth.speaking&&performance.now()-lastEventVoice<1800)return;
+  synth.cancel();
   const u=new SpeechSynthesisUtterance(lang==="fr"?fr:en);
-  u.lang=lang==="fr"?"fr-FR":"en-GB";u.rate=1.02;u.pitch=.92;u.volume=.9;
+  u.lang=lang==="fr"?"fr-FR":"en-GB";u.rate=1.0;u.pitch=.94;u.volume=.92;
   const voices=synth.getVoices(),matches=voices.filter(v=>v.lang.toLowerCase().startsWith(lang));
   if(matches.length)u.voice=matches.find(v=>v.default)||matches[0];
-  synth.speak(u);
+  synth.speak(u);lastEventVoice=performance.now();
  }catch(e){}
 }
-function matchStartVoice(){commentaryClock=0;lastCommentary=0;speakMatch("Le match commence ! Bienvenue dans NEON CARBALL.","Kick-off! Welcome to NEON CARBALL.","fr");}
+function matchStartVoice(){commentaryClock=0;lastCommentary=0;lastHeightState=false;lastPressureState=0;lastBallSpeed=0;speakMatch("C'est parti pour NEON CARBALL ! Les deux équipes sont en place, le coup d'envoi est donné !","And we're off in NEON CARBALL! Both teams are ready and the kickoff is underway!","fr");}
 function commentaryVoice(dt){
- commentaryClock+=dt;if(commentaryClock-lastCommentary<19)return;lastCommentary=commentaryClock;
- if(!ball||!running)return;const p=ball.mesh.position;
- if(p.y>3.1)speakMatch("La balle prend de la hauteur ! Quel envol !","The ball is up in the air! What a launch!");
- else if(Math.abs(p.z)>7)speakMatch("Attention, grosse pression près du but !","Pressure building near the goal!");
- else if(Math.abs(p.x)>12)speakMatch("Belle ouverture sur le côté !","Great space opening up on the wing!");
- else speakMatch("Les deux équipes cherchent l'ouverture. Le rythme s'accélère !","Both teams are looking for an opening. The pace is picking up!");
+ if(!ball||!running)return;
+ commentaryClock+=dt;
+ const p=ball.mesh.position,speed=ball.vel.length(),airborne=p.y>3.25,pressure=Math.abs(p.z)>8.5?Math.sign(p.z):0;
+ if(airborne&&!lastHeightState&&commentaryClock-lastCommentary>4){lastCommentary=commentaryClock;speakMatch("La balle s'envole ! Il peut y avoir un duel aérien !","The ball is up! We could have an aerial challenge!");}
+ else if(pressure!==0&&pressure!==lastPressureState&&commentaryClock-lastCommentary>5){lastCommentary=commentaryClock;speakMatch(pressure>0?"Danger devant le but orange ! La défense doit intervenir !":"Grosse occasion devant le but bleu ! Ça chauffe !",pressure>0?"Danger around the orange goal! The defence has to react!":"A big chance at the blue goal! Things are heating up!");}
+ else if(speed>17&&lastBallSpeed<=17&&commentaryClock-lastCommentary>4){lastCommentary=commentaryClock;speakMatch("Quelle frappe ! La balle part à toute vitesse !","What a strike! The ball is flying at pace!");}
+ lastHeightState=airborne;lastPressureState=pressure;lastBallSpeed=speed;
+ if(commentaryClock-lastCommentary<16)return;lastCommentary=commentaryClock;
+ if(blue===orange)speakMatch("Toujours "+blue+" partout. Tout reste à jouer, aucune équipe ne lâche !","Still "+blue+" all. It's all to play for and neither side is giving an inch!");
+ else if(Math.abs(blue-orange)<=1)speakMatch("Le score est de "+blue+" à "+orange+". Rien n'est joué, chaque action compte !","It's "+blue+" to "+orange+". Nothing is settled; every play matters!");
+ else if(blue>orange)speakMatch(blueName+" mène "+blue+" à "+orange+". L'équipe orange doit réagir !",blueName+" lead "+blue+" to "+orange+". The orange team needs a response!");
+ else speakMatch(orangeName+" mène "+orange+" à "+blue+". Les bleus doivent trouver la solution !",orangeName+" lead "+orange+" to "+blue+". The blue side needs an answer!");
 }
-function boostVoice(){speakMatch("Accélération maximale !","Full boost! What a burst of speed!");}
+function boostVoice(){speakMatch("Boost activé ! Accélération maximale, fonce vers le ballon !","Boost engaged! Maximum acceleration—get to that ball!");}
 function togglePause(force){if(!running)return;paused=typeof force==="boolean"?force:!paused;document.querySelector("#pauseMenu").style.display=paused?"flex":"none";document.querySelector("#pauseBtn").textContent=paused?"▶ REPRENDRE":"Ⅱ PAUSE";if(paused){for(const k in K)K[k]=0;document.querySelectorAll(".touch-btn.pressed").forEach(b=>b.classList.remove("pressed"));}refreshMobileUI()}
 const K={}; addEventListener("keydown",e=>{const key=e.key.toLowerCase();if(key==="p"||key==="escape"){e.preventDefault();if(!e.repeat)togglePause();return}K[key]=1;if([" ","arrowup","arrowdown","arrowleft","arrowright"].includes(key))e.preventDefault();if(key==="c")ballCam=!ballCam;if(key==="r"&&ball)resetBall()});
 addEventListener("keyup",e=>K[e.key.toLowerCase()]=0);
@@ -714,7 +722,7 @@ function collisions(dt){
    const side=d.vel.x*(-nz)+d.vel.z*nx;
    v.x+=(-nz)*side*.035;v.z+=nx*side*.035;
    const maxSpeed=34;if(v.length()>maxSpeed)v.setLength(maxSpeed);
-   if(c===cars[0]&&performance.now()-lastCarVoice>6500){lastCarVoice=performance.now();speakMatch("Je suis sur la balle ! On continue !","I am on the ball! Let us keep going!");}
+   if(c===cars[0]&&performance.now()-lastCarVoice>6500){lastCarVoice=performance.now();speakMatch("Contact avec le ballon ! Continue la pression !","Contact on the ball! Keep the pressure on!");}
    d.hitCooldown=.12;
   }
  });
@@ -730,7 +738,7 @@ function cam(dt){
  camera.position.lerp(p,1-Math.pow(.001,dt));camera.lookAt(target.x,target.y+1,target.z)
 }
 function fmt(s){s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
-function loop(){requestAnimationFrame(loop);refreshMobileUI();const dt=Math.min(clock.getDelta(),.033);if(running&&!paused){remaining-=dt;commentaryVoice(dt);document.querySelector("#timer").textContent=fmt(remaining);cars.forEach((c,i)=>i?ai(c,dt):human(c,dt));ballPhysics(dt);collisions(dt);cam(dt);document.querySelector("#fill").style.width=cars[0].userData.boost+"%";if(remaining<=0){running=false;speakMatch("Fin du match ! Score final : "+blue+" à "+orange+". Merci de jouer !","Full time! Final score: "+blue+" to "+orange+". Thanks for playing!");const verdict=blue>orange?"VICTOIRE !":blue<orange?"DÉFAITE":"MATCH NUL";document.querySelector("#flash").innerHTML=verdict+"<br><small>FIN DU MATCH · "+blue+" — "+orange+"</small>";document.querySelector("#flash").style.display="block";setTimeout(()=>{document.querySelector("#flash").style.display="none";document.querySelector("#menu").style.display="flex";document.querySelector("#score").style.display="none";document.querySelector("#boost").style.display="none";document.querySelector("#help").style.display="none";document.querySelector("#pauseBtn").style.display="none";document.querySelector("#pauseMenu").style.display="none";paused=false},2200)}}renderer.render(scene,camera)}
+function loop(){requestAnimationFrame(loop);refreshMobileUI();const dt=Math.min(clock.getDelta(),.033);if(running&&!paused){remaining-=dt;commentaryVoice(dt);document.querySelector("#timer").textContent=fmt(remaining);cars.forEach((c,i)=>i?ai(c,dt):human(c,dt));ballPhysics(dt);collisions(dt);cam(dt);document.querySelector("#fill").style.width=cars[0].userData.boost+"%";if(remaining<=0){running=false;speakMatch(blue===orange?"Coup de sifflet final ! Match nul, "+blue+" partout. Quelle bataille !":blue>orange?"Coup de sifflet final ! "+blueName+" l’emporte "+blue+" à "+orange+". Victoire méritée !":"Coup de sifflet final ! "+orangeName+" l’emporte "+orange+" à "+blue+". Quelle performance !",blue===orange?"Full time! A draw at "+blue+" all. What a battle!":blue>orange?"Full time! "+blueName+" win "+blue+" to "+orange+". A deserved victory!":"Full time! "+orangeName+" win "+orange+" to "+blue+". What a performance!");const verdict=blue>orange?"VICTOIRE !":blue<orange?"DÉFAITE":"MATCH NUL";document.querySelector("#flash").innerHTML=verdict+"<br><small>FIN DU MATCH · "+blue+" — "+orange+"</small>";document.querySelector("#flash").style.display="block";setTimeout(()=>{document.querySelector("#flash").style.display="none";document.querySelector("#menu").style.display="flex";document.querySelector("#score").style.display="none";document.querySelector("#boost").style.display="none";document.querySelector("#help").style.display="none";document.querySelector("#pauseBtn").style.display="none";document.querySelector("#pauseMenu").style.display="none";paused=false},2200)}}renderer.render(scene,camera)}
 function applySky(){
  if(!scene)return;
  const sky={night:{bg:0x050914,fog:0x050914},sunset:{bg:0x3b1837,fog:0x3b1837},day:{bg:0x73b8e8,fog:0x73b8e8}}[skyType]||{bg:0x050914,fog:0x050914};
