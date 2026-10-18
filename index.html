@@ -72,6 +72,16 @@ button:hover{background:#4387ff}
 <button id="saveProfileBtn" type="button" style="display:none;margin-top:8px;padding:9px;font-size:13px;background:#176b62">SAUVEGARDER LE PSEUDO</button>
 <button id="signOutBtn" type="button" style="display:none;margin-top:8px;padding:9px;font-size:13px;background:#202c45">SE DÉCONNECTER</button>
 <div id="accountMessage" role="status" aria-live="polite" style="font-size:12px;color:#b8c8ef;margin-top:8px;line-height:1.4">Connecte-toi pour préparer la sauvegarde de ta progression.</div></div>
+<div id="garageBox" style="display:none;margin-top:12px;padding:12px;border:1px solid #334b78;border-radius:12px;background:#0a1325">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><strong>GARAGE</strong><strong id="walletCoins" style="color:#67e8f9">— pièces</strong></div>
+<div id="garageStatus" role="status" aria-live="polite" style="font-size:12px;color:#b8c8ef;margin:7px 0">Connecte-toi pour accéder au garage.</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">
+<button type="button" data-upgrade="engine" style="margin:0;padding:9px 4px;font-size:11px;background:#172b4a">MOTEUR<br><span data-level="engine">Niv. 0/5</span><br><span data-cost="engine">100 pièces</span></button>
+<button type="button" data-upgrade="boost" style="margin:0;padding:9px 4px;font-size:11px;background:#172b4a">BOOST<br><span data-level="boost">Niv. 0/5</span><br><span data-cost="boost">100 pièces</span></button>
+<button type="button" data-upgrade="handling" style="margin:0;padding:9px 4px;font-size:11px;background:#172b4a">MANIABILITÉ<br><span data-level="handling">Niv. 0/5</span><br><span data-cost="handling">100 pièces</span></button>
+</div>
+<div style="font-size:11px;color:#91a8db;margin-top:7px">Améliorations pour la voiture sélectionnée.</div>
+</div>
 <button id="start">JOUER</button>
 </div></div>
 <div id="score" class="ui" style="display:none"><span id="b">0</span> — <span id="o">0</span><div id="timer">5:00</div></div><button id="pauseBtn" style="display:none" aria-label="Mettre le match en pause">Ⅱ PAUSE</button><div id="pauseMenu"><div class="pause-panel"><h2>PAUSE</h2><p>Le match est suspendu.</p><button id="resumeBtn">REPRENDRE</button><button id="menuBtn">RETOUR AU MENU</button></div></div>
@@ -91,6 +101,72 @@ function setAccountMessage(message, isError=false) {
  accountMessage.textContent = message;
  accountMessage.style.color = isError ? "#ff9b9b" : "#b8c8ef";
 }
+const garageBox = document.querySelector("#garageBox");
+const garageStatus = document.querySelector("#garageStatus");
+let walletCoins = null;
+let playerUpgrades = { engine: 0, boost: 0, handling: 0 };
+function setGarageStatus(message, isError=false) {
+ garageStatus.textContent = message;
+ garageStatus.style.color = isError ? "#ff9b9b" : "#b8c8ef";
+}
+function renderGarage() {
+ document.querySelector("#walletCoins").textContent = walletCoins == null ? "— pièces" : walletCoins + " pièces";
+ for (const type of ["engine","boost","handling"]) {
+  const level = playerUpgrades[type] || 0, cost = 100 * (level + 1);
+  document.querySelector('[data-level="'+type+'"]').textContent = "Niv. " + level + "/5";
+  document.querySelector('[data-cost="'+type+'"]').textContent = level >= 5 ? "MAX" : cost + " pièces";
+  const btn = document.querySelector('[data-upgrade="'+type+'"]');
+  btn.disabled = !activeUser || level >= 5 || walletCoins == null || walletCoins < cost;
+  btn.style.opacity = btn.disabled ? ".55" : "1";
+ }
+}
+async function loadGarage() {
+ if (!activeUser) {
+  walletCoins = null; playerUpgrades = { engine: 0, boost: 0, handling: 0 };
+  garageBox.style.display = "none"; renderGarage(); return;
+ }
+ garageBox.style.display = "block";
+ setGarageStatus("Chargement du portefeuille…");
+ try {
+  const [{ data: wallet, error: walletError }, { data: upgrades, error: upgradesError }] = await Promise.all([
+   supabase.from("player_wallets").select("coins").eq("user_id", activeUser.id).maybeSingle(),
+   supabase.from("player_upgrades").select("car_id,upgrade_type,level").eq("user_id", activeUser.id).eq("car_id", document.querySelector("#car").value)
+  ]);
+  if (walletError) throw walletError;
+  if (upgradesError) throw upgradesError;
+  if (!wallet) throw new Error("Portefeuille introuvable. Vérifie le script SQL Supabase.");
+  walletCoins = wallet.coins;
+  playerUpgrades = { engine: 0, boost: 0, handling: 0 };
+  for (const item of upgrades || []) playerUpgrades[item.upgrade_type] = item.level;
+  renderGarage();
+  setGarageStatus("Améliorations de " + document.querySelector("#car").selectedOptions[0].text.split(" — ")[0] + ". Choisis une amélioration à acheter.");
+ } catch (e) {
+  walletCoins = null; renderGarage();
+  setGarageStatus("Garage indisponible : " + (e.message || "erreur inconnue"), true);
+ }
+}
+async function buyUpgrade(type) {
+ if (!activeUser) return setGarageStatus("Connecte-toi pour acheter une amélioration.", true);
+ document.querySelectorAll("[data-upgrade]").forEach(button => button.disabled = true);
+ setGarageStatus("Achat sécurisé en cours…");
+ try {
+  const { data, error } = await supabase.rpc("buy_car_upgrade", {
+   p_car_id: document.querySelector("#car").value,
+   p_upgrade_type: type
+  });
+  if (error) throw error;
+  if (!data?.success) throw new Error("Achat non confirmé.");
+  walletCoins = data.coins; playerUpgrades[type] = data.level;
+  renderGarage();
+  setGarageStatus("Amélioration achetée ! Niveau " + data.level + " (−" + data.cost + " pièces).");
+ } catch (e) {
+  setGarageStatus("Achat impossible : " + (e.message || "erreur inconnue"), true);
+  await loadGarage();
+ } finally { renderGarage(); }
+}
+document.querySelectorAll("[data-upgrade]").forEach(button => button.addEventListener("click", () => buyUpgrade(button.dataset.upgrade)));
+document.querySelector("#car").addEventListener("change", loadGarage);
+
 async function renderAccount(session) {
  activeUser = session?.user || null;
  document.querySelector("#accountState").textContent = activeUser ? "Connecté" : "Non connecté";
@@ -117,6 +193,7 @@ async function renderAccount(session) {
   setAccountMessage(error
    ? "Connecté, mais profil non chargé : " + error.message
    : "Connecté : " + (activeUser.email || "compte joueur") + ". Profil et réglages prêts.");
+  await loadGarage();
  }
 }
 document.querySelector("#signUpBtn").addEventListener("click", async () => {
@@ -159,7 +236,7 @@ document.querySelector("#saveProfileBtn").addEventListener("click", async () => 
 document.querySelector("#signOutBtn").addEventListener("click", async () => {
  const { error } = await supabase.auth.signOut();
  if (error) return setAccountMessage(error.message, true);
- renderAccount(null); setAccountMessage("Déconnexion effectuée.");
+ await renderAccount(null); setAccountMessage("Déconnexion effectuée.");
 });
 supabase.auth.getSession().then(({ data, error }) => {
  if (error) setAccountMessage("Impossible de vérifier la session : " + error.message, true);
