@@ -97,28 +97,38 @@ alter table public.nc_tournament_teams enable row level security;
 alter table public.nc_tournament_matches enable row level security;
 
 -- Les catalogues publics peuvent être lus ; les créations privées restent réservées à leur propriétaire.
+drop policy if exists "nc teams read public or own" on public.nc_teams;
 create policy "nc teams read public or own" on public.nc_teams
   for select to authenticated using (is_public or owner_id = auth.uid());
+drop policy if exists "nc teams insert own" on public.nc_teams;
 create policy "nc teams insert own" on public.nc_teams
   for insert to authenticated with check (owner_id = auth.uid());
+drop policy if exists "nc teams update own" on public.nc_teams;
 create policy "nc teams update own" on public.nc_teams
   for update to authenticated using (owner_id = auth.uid()) with check (owner_id = auth.uid());
+drop policy if exists "nc teams delete own" on public.nc_teams;
 create policy "nc teams delete own" on public.nc_teams
   for delete to authenticated using (owner_id = auth.uid());
 
+drop policy if exists "nc players read public or own" on public.nc_players;
 create policy "nc players read public or own" on public.nc_players
   for select to authenticated using (owner_id is null or owner_id = auth.uid());
+drop policy if exists "nc players insert own or shared fictional" on public.nc_players;
 create policy "nc players insert own or shared fictional" on public.nc_players
   for insert to authenticated with check (owner_id = auth.uid());
+drop policy if exists "nc players update own" on public.nc_players;
 create policy "nc players update own" on public.nc_players
   for update to authenticated using (owner_id = auth.uid()) with check (owner_id = auth.uid());
+drop policy if exists "nc players delete own" on public.nc_players;
 create policy "nc players delete own" on public.nc_players
   for delete to authenticated using (owner_id = auth.uid());
 
+drop policy if exists "nc rosters read accessible teams" on public.nc_team_rosters;
 create policy "nc rosters read accessible teams" on public.nc_team_rosters
   for select to authenticated using (
     exists (select 1 from public.nc_teams t where t.id = team_id and (t.is_public or t.owner_id = auth.uid()))
   );
+drop policy if exists "nc rosters manage own teams" on public.nc_team_rosters;
 create policy "nc rosters manage own teams" on public.nc_team_rosters
   for all to authenticated using (
     exists (select 1 from public.nc_teams t where t.id = team_id and t.owner_id = auth.uid())
@@ -126,19 +136,25 @@ create policy "nc rosters manage own teams" on public.nc_team_rosters
     exists (select 1 from public.nc_teams t where t.id = team_id and t.owner_id = auth.uid())
   );
 
+drop policy if exists "nc tournaments read own" on public.nc_tournaments;
 create policy "nc tournaments read own" on public.nc_tournaments
   for select to authenticated using (owner_id = auth.uid());
+drop policy if exists "nc tournaments insert own" on public.nc_tournaments;
 create policy "nc tournaments insert own" on public.nc_tournaments
   for insert to authenticated with check (owner_id = auth.uid());
+drop policy if exists "nc tournaments update own" on public.nc_tournaments;
 create policy "nc tournaments update own" on public.nc_tournaments
   for update to authenticated using (owner_id = auth.uid()) with check (owner_id = auth.uid());
+drop policy if exists "nc tournaments delete own" on public.nc_tournaments;
 create policy "nc tournaments delete own" on public.nc_tournaments
   for delete to authenticated using (owner_id = auth.uid());
 
+drop policy if exists "nc tournament teams read own tournament" on public.nc_tournament_teams;
 create policy "nc tournament teams read own tournament" on public.nc_tournament_teams
   for select to authenticated using (
     exists (select 1 from public.nc_tournaments t where t.id = tournament_id and t.owner_id = auth.uid())
   );
+drop policy if exists "nc tournament teams manage own tournament" on public.nc_tournament_teams;
 create policy "nc tournament teams manage own tournament" on public.nc_tournament_teams
   for all to authenticated using (
     exists (select 1 from public.nc_tournaments t where t.id = tournament_id and t.owner_id = auth.uid())
@@ -146,10 +162,12 @@ create policy "nc tournament teams manage own tournament" on public.nc_tournamen
     exists (select 1 from public.nc_tournaments t where t.id = tournament_id and t.owner_id = auth.uid())
   );
 
+drop policy if exists "nc tournament matches read own tournament" on public.nc_tournament_matches;
 create policy "nc tournament matches read own tournament" on public.nc_tournament_matches
   for select to authenticated using (
     exists (select 1 from public.nc_tournaments t where t.id = tournament_id and t.owner_id = auth.uid())
   );
+drop policy if exists "nc tournament matches manage own tournament" on public.nc_tournament_matches;
 create policy "nc tournament matches manage own tournament" on public.nc_tournament_matches
   for all to authenticated using (
     exists (select 1 from public.nc_tournaments t where t.id = tournament_id and t.owner_id = auth.uid())
@@ -161,3 +179,4 @@ create policy "nc tournament matches manage own tournament" on public.nc_tournam
 -- 1) ajouter les données du catalogue officiel uniquement si leur licence le permet ;
 -- 2) définir la politique d'accès du stockage des logos ;
 -- 3) valider les policies sur un projet de test avant toute exécution en production.
+-- 4) ce script rend les policies nommées ci-dessus réexécutables via DROP POLICY IF EXISTS.
