@@ -82,8 +82,8 @@ button:hover{background:#4387ff}
 </div>
 <div style="font-size:11px;color:#91a8db;margin-top:7px">Améliorations pour la voiture sélectionnée.</div>
 </div>
-<div id="teamBox" style="margin-top:12px;padding:12px;border:1px solid #334b78;border-radius:12px;background:#0a1325"><strong>ÉQUIPES PERSONNALISÉES</strong><label for="blueTeamName">Équipe bleue</label><input id="blueTeamName" maxlength="22" value="NEON BLUE" style="width:100%;padding:10px;background:#111b31;color:#fff"><label for="orangeTeamName">Équipe orange</label><input id="orangeTeamName" maxlength="22" value="TURBO ORANGE" style="width:100%;padding:10px;background:#111b31;color:#fff"><div style="display:flex;gap:8px"><label style="flex:1">Couleur bleue<input id="blueTeamColor" type="color" value="#168cff" style="display:block;width:100%;height:36px"></label><label style="flex:1">Couleur orange<input id="orangeTeamColor" type="color" value="#ff6d20" style="display:block;width:100%;height:36px"></label></div><small style="color:#91a8db">Noms et couleurs appliqués au match local.</small></div>
-<div id="tournamentBox" style="margin-top:12px;padding:12px;border:1px solid #334b78;border-radius:12px;background:#0a1325"><strong>MODE TOURNOI</strong><label for="tournamentSize">Format</label><select id="tournamentSize"><option value="4">4 équipes · demi-finales</option><option value="8">8 équipes · quarts de finale</option></select><label for="tournamentNames">Noms des équipes (une par ligne)</label><textarea id="tournamentNames" rows="4" style="width:100%;resize:vertical;padding:10px;background:#111b31;color:#fff" placeholder="NEON BLUE&#10;TURBO ORANGE&#10;ASTRAL FC&#10;NOVA UNITED"></textarea><button id="makeTournament" type="button" style="margin-top:8px;padding:10px">GÉNÉRER LE TABLEAU</button><div id="tournamentStatus" role="status" style="font-size:12px;color:#b8c8ef;margin-top:8px">Prépare un tableau de tournoi local.</div><div id="tournamentBracket" style="font-size:12px;line-height:1.6;margin-top:8px;white-space:pre-wrap;color:#d5e2ff"></div></div>
+<div id="teamBox" style="margin-top:12px;padding:12px;border:1px solid #334b78;border-radius:12px;background:#0a1325"><strong>ÉQUIPES PERSONNALISÉES</strong><label for="blueTeamName">Équipe bleue</label><input id="blueTeamName" maxlength="22" value="NEON BLUE" style="width:100%;padding:10px;background:#111b31;color:#fff"><label for="orangeTeamName">Équipe orange</label><input id="orangeTeamName" maxlength="22" value="TURBO ORANGE" style="width:100%;padding:10px;background:#111b31;color:#fff"><div style="display:flex;gap:8px"><label style="flex:1">Couleur bleue<input id="blueTeamColor" type="color" value="#168cff" style="display:block;width:100%;height:36px"></label><label style="flex:1">Couleur orange<input id="orangeTeamColor" type="color" value="#ff6d20" style="display:block;width:100%;height:36px"></label></div><button id="saveTeamsBtn" type="button" style="margin-top:8px;padding:10px;font-size:13px;background:#176b62">SAUVEGARDER MES ÉQUIPES</button><div id="savedTeamsStatus" role="status" style="font-size:12px;color:#b8c8ef;margin-top:6px">Connecte-toi pour sauvegarder tes équipes.</div><small style="color:#91a8db">Noms et couleurs appliqués au match local.</small></div>
+<div id="tournamentBox" style="margin-top:12px;padding:12px;border:1px solid #334b78;border-radius:12px;background:#0a1325"><strong>MODE TOURNOI</strong><label for="tournamentSize">Format</label><select id="tournamentSize"><option value="4">4 équipes · demi-finales</option><option value="8">8 équipes · quarts de finale</option></select><label for="tournamentNames">Noms des équipes (une par ligne)</label><textarea id="tournamentNames" rows="4" style="width:100%;resize:vertical;padding:10px;background:#111b31;color:#fff" placeholder="NEON BLUE&#10;TURBO ORANGE&#10;ASTRAL FC&#10;NOVA UNITED"></textarea><button id="makeTournament" type="button" style="margin-top:8px;padding:10px">GÉNÉRER LE TABLEAU</button><button id="saveTournamentBtn" type="button" style="margin-top:8px;padding:10px;background:#176b62">SAUVEGARDER LE TOURNOI</button><div id="tournamentStatus" role="status" style="font-size:12px;color:#b8c8ef;margin-top:8px">Prépare un tableau de tournoi local.</div><div id="tournamentBracket" style="font-size:12px;line-height:1.6;margin-top:8px;white-space:pre-wrap;color:#d5e2ff"></div></div>
 <div id="onlineBox" style="margin-top:12px;padding:12px;border:1px solid #334b78;border-radius:12px;background:#0a1325"><strong>MULTIJOUEUR EN LIGNE · SALON</strong><div style="font-size:11px;color:#91a8db;margin:6px 0">Crée ou rejoins un salon et vois les joueurs connectés. Les déplacements de voitures et de balle ne sont pas encore synchronisés en match.</div><label for="roomCode">Code du salon</label><input id="roomCode" maxlength="12" placeholder="Ex. NEON7" style="width:100%;padding:10px;background:#111b31;color:#fff"><div style="display:flex;gap:8px;margin-top:8px"><button id="createRoom" type="button" style="margin:0;padding:10px;font-size:13px">CRÉER</button><button id="joinRoom" type="button" style="margin:0;padding:10px;font-size:13px;background:#202c45">REJOINDRE</button><button id="leaveRoom" type="button" style="margin:0;padding:10px;font-size:13px;background:#202c45">QUITTER</button></div><div id="roomStatus" role="status" aria-live="polite" style="font-size:12px;color:#b8c8ef;margin-top:8px">Connecte-toi pour utiliser les salons.</div><div id="roomPlayers" style="font-size:12px;color:#d5e2ff;margin-top:6px"></div></div><button id="start">JOUER</button>
 </div></div>
 <div id="score" class="ui" style="display:none"><span id="b">0</span> — <span id="o">0</span><div id="timer">5:00</div></div><button id="pauseBtn" style="display:none" aria-label="Mettre le match en pause">Ⅱ PAUSE</button><div id="pauseMenu"><div class="pause-panel"><h2>PAUSE</h2><p>Le match est suspendu.</p><button id="resumeBtn">REPRENDRE</button><button id="menuBtn">RETOUR AU MENU</button></div></div>
@@ -170,6 +170,60 @@ async function buyUpgrade(type) {
 document.querySelectorAll("[data-upgrade]").forEach(button => button.addEventListener("click", () => buyUpgrade(button.dataset.upgrade)));
 document.querySelector("#car").addEventListener("change", loadGarage);
 
+
+function setSavedTeamsStatus(message, isError=false) {
+ const el = document.querySelector("#savedTeamsStatus");
+ el.textContent = message;
+ el.style.color = isError ? "#ff9b9b" : "#b8c8ef";
+}
+async function getOrCreateOwnedTeam(name, color, teamType="custom") {
+ const cleanName = (name || "").trim().slice(0,48);
+ if (!cleanName) throw new Error("Chaque équipe doit avoir un nom.");
+ const { data: existing, error: findError } = await supabase.from("nc_teams")
+  .select("id,name,primary_color,secondary_color")
+  .eq("owner_id", activeUser.id).eq("name", cleanName).limit(1).maybeSingle();
+ if (findError) throw findError;
+ if (existing) {
+  const { data, error } = await supabase.from("nc_teams").update({
+   primary_color: color, updated_at: new Date().toISOString()
+  }).eq("id", existing.id).select("id,name").single();
+  if (error) throw error;
+  return data;
+ }
+ const { data, error } = await supabase.from("nc_teams").insert({
+  owner_id: activeUser.id, name: cleanName, team_type: teamType,
+  primary_color: color, secondary_color: "#FFFFFF", is_public: false
+ }).select("id,name").single();
+ if (error) throw error;
+ return data;
+}
+async function loadSavedTeams() {
+ if (!activeUser) return;
+ const { data, error } = await supabase.from("nc_teams")
+  .select("name,primary_color,team_type")
+  .eq("owner_id", activeUser.id).eq("team_type","custom")
+  .order("updated_at", { ascending:false }).limit(2);
+ if (error) throw error;
+ if (data?.[0]) {
+  document.querySelector("#blueTeamName").value = data[0].name;
+  document.querySelector("#blueTeamColor").value = /^#[0-9a-f]{6}$/i.test(data[0].primary_color||"") ? data[0].primary_color : "#168cff";
+ }
+ if (data?.[1]) {
+  document.querySelector("#orangeTeamName").value = data[1].name;
+  document.querySelector("#orangeTeamColor").value = /^#[0-9a-f]{6}$/i.test(data[1].primary_color||"") ? data[1].primary_color : "#ff6d20";
+ }
+}
+async function saveCustomTeams() {
+ if (!activeUser) return setSavedTeamsStatus("Connecte-toi avant de sauvegarder tes équipes.", true);
+ const btn = document.querySelector("#saveTeamsBtn"); btn.disabled = true;
+ setSavedTeamsStatus("Sauvegarde des équipes…");
+ try {
+  await getOrCreateOwnedTeam(document.querySelector("#blueTeamName").value, document.querySelector("#blueTeamColor").value);
+  await getOrCreateOwnedTeam(document.querySelector("#orangeTeamName").value, document.querySelector("#orangeTeamColor").value);
+  setSavedTeamsStatus("Équipes sauvegardées sur ton compte.");
+ } catch (e) { setSavedTeamsStatus("Sauvegarde impossible : " + (e.message || "erreur inconnue"), true); }
+ finally { btn.disabled = false; }
+}
 async function renderAccount(session) {
  activeUser = session?.user || null;
  document.querySelector("#accountState").textContent = activeUser ? "Connecté" : "Non connecté";
@@ -197,8 +251,11 @@ async function renderAccount(session) {
    ? "Connecté, mais profil non chargé : " + error.message
    : "Connecté : " + (activeUser.email || "compte joueur") + ". Profil et réglages prêts.");
   await loadGarage();
+  try { await loadSavedTeams(); setSavedTeamsStatus("Équipes de ton compte chargées."); }
+  catch (e) { setSavedTeamsStatus("Compte connecté, mais équipes non chargées : " + (e.message || "erreur"), true); }
  }
 }
+document.querySelector("#saveTeamsBtn").addEventListener("click", saveCustomTeams);
 document.querySelector("#signUpBtn").addEventListener("click", async () => {
  const email = document.querySelector("#playerEmail").value.trim();
  const password = document.querySelector("#playerPassword").value;
@@ -786,7 +843,73 @@ async function connectRoom(create){if(!activeUser){setRoomStatus("Connecte-toi d
 document.querySelector("#createRoom").addEventListener("click",()=>connectRoom(true));
 document.querySelector("#joinRoom").addEventListener("click",()=>connectRoom(false));
 document.querySelector("#leaveRoom").addEventListener("click",async()=>{if(lobbyChannel){await supabase.removeChannel(lobbyChannel);lobbyChannel=null;}document.querySelector("#roomPlayers").textContent="";setRoomStatus("Tu as quitté le salon.");});
-document.querySelector("#makeTournament").addEventListener("click",()=>{const size=+document.querySelector("#tournamentSize").value;let names=document.querySelector("#tournamentNames").value.split(/\n|,/).map(x=>x.trim()).filter(Boolean);if(!names.length)names=[document.querySelector("#blueTeamName").value.trim()||"NEON BLUE",document.querySelector("#orangeTeamName").value.trim()||"TURBO ORANGE","ASTRAL FC","NOVA UNITED","PHANTOM RACING","VOLT CLUB","TITAN UNITED","BLAZE FC"];names=[...new Set(names)].slice(0,size);while(names.length<size)names.push("Équipe "+(names.length+1));let lines=[],current=names;while(current.length>2){lines.push(current.length===4?"DEMI-FINALES":"QUARTS DE FINALE");for(let i=0;i<current.length;i+=2)lines.push("Match "+(i/2+1)+" : "+current[i]+" vs "+current[i+1]);current=Array(current.length/2).fill(0).map((_,i)=>"Vainqueur match "+(i+1));}lines.push("FINALE",current[0]+" vs "+current[1]);document.querySelector("#tournamentBracket").textContent=lines.join("\n");document.querySelector("#tournamentStatus").textContent="Tableau généré pour "+size+" équipes. Les résultats et la progression automatique ne sont pas encore reliés aux matchs.";});
+function buildTournamentNames() {
+ const size = +document.querySelector("#tournamentSize").value;
+ let names = document.querySelector("#tournamentNames").value.split(/\n|,/).map(x=>x.trim()).filter(Boolean);
+ if (!names.length) names = [document.querySelector("#blueTeamName").value.trim()||"NEON BLUE",document.querySelector("#orangeTeamName").value.trim()||"TURBO ORANGE","ASTRAL FC","NOVA UNITED","PHANTOM RACING","VOLT CLUB","TITAN UNITED","BLAZE FC"];
+ names = [...new Set(names)].slice(0,size);
+ while (names.length<size) names.push("Équipe "+(names.length+1));
+ return names;
+}
+function previewTournament() {
+ const size=+document.querySelector("#tournamentSize").value, names=buildTournamentNames();
+ let lines=[],current=names,round=1;
+ while(current.length>2) {
+  lines.push(current.length===4?"DEMI-FINALES":"QUARTS DE FINALE");
+  for(let i=0;i<current.length;i+=2) lines.push("Match "+(i/2+1)+" : "+current[i]+" vs "+current[i+1]);
+  current=Array(current.length/2).fill(0).map((_,i)=>"Vainqueur match "+(i+1)); round++;
+ }
+ lines.push("FINALE",current[0]+" vs "+current[1]);
+ document.querySelector("#tournamentBracket").textContent=lines.join("\n");
+ document.querySelector("#tournamentStatus").textContent="Tableau généré pour "+size+" équipes. Sauvegarde possible si tu es connecté ; les scores ne font pas encore progresser le tableau automatiquement.";
+}
+document.querySelector("#makeTournament").addEventListener("click", previewTournament);
+document.querySelector("#saveTournamentBtn").addEventListener("click", async () => {
+ const status = document.querySelector("#tournamentStatus"), btn = document.querySelector("#saveTournamentBtn");
+ if (!activeUser) { status.textContent="Connecte-toi pour sauvegarder le tournoi."; return; }
+ const size=+document.querySelector("#tournamentSize").value, names=buildTournamentNames();
+ btn.disabled=true; status.textContent="Sauvegarde du tournoi et de ses équipes…";
+ let tournamentId=null;
+ try {
+  const teamRows=[];
+  for (const name of names) {
+   const team=await getOrCreateOwnedTeam(name, "#168cff");
+   teamRows.push({tournament_id:null,team_id:team.id,seed:teamRows.length+1,points:0,played:0,wins:0,draws:0,losses:0,goals_for:0,goals_against:0});
+  }
+  const {data:tournament,error:tError}=await supabase.from("nc_tournaments").insert({
+   owner_id:activeUser.id,
+   name:(names[0]+" — Tournoi").slice(0,64),
+   format:"knockout",team_count:size,status:"draft",
+   settings:{team_names:names,version:1}
+  }).select("id").single();
+  if(tError) throw tError;
+  tournamentId=tournament.id;
+  const entries=teamRows.map(x=>({...x,tournament_id:tournamentId}));
+  const {error:entryError}=await supabase.from("nc_tournament_teams").insert(entries);
+  if(entryError) throw entryError;
+  const matches=[];
+  let roundTeams=teamRows.map(x=>x.team_id), roundNumber=1, matchNumber=1;
+  while(roundTeams.length>1) {
+   const next=[];
+   for(let i=0;i<roundTeams.length;i+=2) {
+    matches.push({
+     tournament_id:tournamentId,round_number:roundNumber,match_number:matchNumber++,
+     stage:roundTeams.length===2?"final":"knockout",
+     home_team_id:roundTeams[i]||null,away_team_id:roundTeams[i+1]||null,
+     home_score:null,away_score:null,status:"scheduled"
+    });
+    next.push(null);
+   }
+   roundTeams=next;roundNumber++;matchNumber=1;
+  }
+  const {error:matchError}=await supabase.from("nc_tournament_matches").insert(matches);
+  if(matchError) throw matchError;
+  status.textContent="Tournoi sauvegardé sur ton compte avec "+size+" équipes et "+matches.length+" matchs planifiés. La progression automatique après les scores sera ajoutée ensuite.";
+ } catch(e) {
+  status.textContent="Sauvegarde incomplète : "+(e.message||"erreur inconnue")+". Vérifie Supabase avant de réessayer.";
+  status.style.color="#ff9b9b";
+ } finally { btn.disabled=false; }
+});
 
 document.querySelector("#resumeBtn").onclick=()=>togglePause(false);
 document.querySelector("#pauseBtn").onclick=()=>togglePause();
