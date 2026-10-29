@@ -126,14 +126,35 @@ create policy "nc players delete own" on public.nc_players
 drop policy if exists "nc rosters read accessible teams" on public.nc_team_rosters;
 create policy "nc rosters read accessible teams" on public.nc_team_rosters
   for select to authenticated using (
-    exists (select 1 from public.nc_teams t where t.id = team_id and (t.is_public or t.owner_id = auth.uid()))
+    exists (
+      select 1 from public.nc_teams t
+      where t.id = team_id and (t.is_public or t.owner_id = auth.uid())
+    )
+    and exists (
+      select 1 from public.nc_players p
+      where p.id = player_id and (p.owner_id is null or p.owner_id = auth.uid())
+    )
   );
 drop policy if exists "nc rosters manage own teams" on public.nc_team_rosters;
 create policy "nc rosters manage own teams" on public.nc_team_rosters
   for all to authenticated using (
-    exists (select 1 from public.nc_teams t where t.id = team_id and t.owner_id = auth.uid())
+    exists (
+      select 1 from public.nc_teams t
+      where t.id = team_id and t.owner_id = auth.uid()
+    )
+    and exists (
+      select 1 from public.nc_players p
+      where p.id = player_id and (p.owner_id is null or p.owner_id = auth.uid())
+    )
   ) with check (
-    exists (select 1 from public.nc_teams t where t.id = team_id and t.owner_id = auth.uid())
+    exists (
+      select 1 from public.nc_teams t
+      where t.id = team_id and t.owner_id = auth.uid()
+    )
+    and exists (
+      select 1 from public.nc_players p
+      where p.id = player_id and (p.owner_id is null or p.owner_id = auth.uid())
+    )
   );
 
 drop policy if exists "nc tournaments read own" on public.nc_tournaments;
@@ -180,3 +201,7 @@ create policy "nc tournament matches manage own tournament" on public.nc_tournam
 -- 2) définir la politique d'accès du stockage des logos ;
 -- 3) valider les policies sur un projet de test avant toute exécution en production.
 -- 4) ce script rend les policies nommées ci-dessus réexécutables via DROP POLICY IF EXISTS.
+-- 5) les effectifs ne peuvent référencer que des joueurs du catalogue partagé (owner_id NULL)
+--    ou appartenant à l'utilisateur connecté ; les équipes publiques restent en lecture seule.
+-- 6) les scores restent modifiables par le propriétaire du tournoi : pour une compétition
+--    classée/compétitive, les résultats et la progression doivent être validés côté serveur.
