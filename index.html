@@ -918,16 +918,19 @@ async function persistTournamentResult(homeScore,awayScore){
   if(scoreError)throw scoreError;
   if(!savedMatch)throw new Error("Aucune ligne modifiée. Vérifie que tu es connecté avec le compte propriétaire du tournoi et que les règles RLS Supabase autorisent la modification.");
   const {data:allMatches,error:allError}=await supabase.from("nc_tournament_matches").select("id,round_number,match_number,stage,home_team_id,away_team_id,status").eq("tournament_id",tournamentId).order("round_number").order("match_number");if(allError)throw allError;
-  if(!winnerId){status.textContent="Score enregistré : "+homeScore+"–"+awayScore+". Égalité en élimination directe : aucun vainqueur n’est qualifié. Il faut rejouer ou ajouter une séance de tirs au but.";status.style.color="#ffd28a";return;}
+  if(!winnerId){status.textContent="Score enregistré : "+homeScore+"–"+awayScore+". Égalité en élimination directe : aucun vainqueur n’est qualifié. Une séance de tirs au but sera nécessaire.";status.style.color="#ffd28a";await refreshSavedTournaments();await displaySavedTournamentBracket();return;}
   const next=allMatches.find(m=>m.status==="scheduled"&&m.round_number===match.round_number+1&&(!m.home_team_id||!m.away_team_id));
   if(next){
    const field=!next.home_team_id?"home_team_id":"away_team_id";
-   const {error:advanceError}=await supabase.from("nc_tournament_matches").update({[field]:winnerId}).eq("id",next.id);if(advanceError)throw advanceError;
+   const {data:advancedMatch,error:advanceError}=await supabase.from("nc_tournament_matches").update({[field]:winnerId}).eq("id",next.id).select("id,home_team_id,away_team_id").maybeSingle();
+   if(advanceError)throw advanceError;
+   if(!advancedMatch||advancedMatch[field]!==winnerId)throw new Error("Le vainqueur n’a pas pu être inscrit dans le prochain match. Vérifie les règles RLS de nc_tournament_matches.");
   }
   const remaining=allMatches.some(m=>m.id!==match.id&&m.status==="scheduled");
   if(!remaining){const {error:doneError}=await supabase.from("nc_tournaments").update({status:"completed",updated_at:new Date().toISOString()}).eq("id",tournamentId);if(doneError)throw doneError;status.textContent="Score enregistré : "+homeScore+"–"+awayScore+". TOURNOI TERMINÉ !";}
   else {const {error:progressError}=await supabase.from("nc_tournaments").update({status:"in_progress",updated_at:new Date().toISOString()}).eq("id",tournamentId);if(progressError)throw progressError;status.textContent="Score enregistré : "+homeScore+"–"+awayScore+". Vainqueur qualifié automatiquement pour le prochain tour.";}
   await refreshSavedTournaments();
+  await displaySavedTournamentBracket();
  }catch(e){status.textContent="Match terminé, mais enregistrement du résultat impossible : "+(e.message||"erreur");status.style.color="#ff9b9b";}
 }
 function buildTournamentNames() {
