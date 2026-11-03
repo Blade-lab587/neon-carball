@@ -89,6 +89,7 @@ button:hover{background:#4387ff}
 <div id="score" class="ui" style="display:none"><span id="b">0</span> — <span id="o">0</span><div id="timer">5:00</div></div><button id="pauseBtn" style="display:none" aria-label="Mettre le match en pause">Ⅱ PAUSE</button><div id="pauseMenu"><div class="pause-panel"><h2>PAUSE</h2><p>Le match est suspendu.</p><button id="resumeBtn">REPRENDRE</button><button id="menuBtn">RETOUR AU MENU</button></div></div>
 <div id="boost" class="ui"><div id="fill"></div></div>
 <div id="help" class="ui">ZQSD / WASD : conduire · ESPACE : boost · SHIFT : saut/double saut · C : caméra ballon · R : reset</div><div id="mobileControls"><div id="touchDrive" class="touch-cluster"><button class="touch-btn" data-key="a">◀</button><div style="display:flex;flex-direction:column;gap:8px"><button class="touch-btn" data-key="w">▲</button><button class="touch-btn" data-key="s">▼</button></div><button class="touch-btn" data-key="d">▶</button></div><div id="touchActions" class="touch-cluster"><button class="touch-btn action" data-action="boost">BOOST</button><button class="touch-btn action" data-action="jump">SAUT</button><button class="touch-btn action" data-action="camera">CAM</button><button class="touch-btn action" data-action="pause">PAUSE</button><button class="touch-btn action" data-action="reset">RESET</button></div></div><div id="landscapeNotice"><div class="inner"><div class="rotate">📱 ↻</div>Tourne ton téléphone en mode paysage pour jouer à NEON CARBALL.</div></div>
+<div id="shootoutPanel" style="display:none;position:fixed;z-index:60;inset:0;background:rgba(3,7,18,.94);align-items:center;justify-content:center;padding:18px"><div style="width:min(440px,100%);background:#101d34;border:1px solid #4776b8;border-radius:16px;padding:22px;text-align:center;box-shadow:0 15px 50px #000a"><h2 style="margin:0 0 8px;color:#8bd4ff">SÉANCE DE TIRS AU BUT</h2><p id="shootoutInfo">Choisis la direction de ton tir.</p><div id="shootoutScore" style="font-size:24px;font-weight:900;margin:14px">0 — 0</div><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="shootoutChoice" data-shot="left">GAUCHE</button><button class="shootoutChoice" data-shot="center">CENTRE</button><button class="shootoutChoice" data-shot="right">DROITE</button></div><p id="shootoutFeedback" style="min-height:24px;color:#b8c8ef"></p></div></div>
 <div id="flash"></div>
 <script type="module">
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
@@ -799,7 +800,7 @@ function cam(dt){
  camera.position.lerp(p,1-Math.pow(.001,dt));camera.lookAt(target.x,target.y+1,target.z)
 }
 function fmt(s){s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
-function loop(){requestAnimationFrame(loop);refreshMobileUI();const dt=Math.min(clock.getDelta(),.033);if(running&&!paused){remaining-=dt;commentaryVoice(dt);document.querySelector("#timer").textContent=fmt(remaining);cars.forEach((c,i)=>i?ai(c,dt):human(c,dt));ballPhysics(dt);collisions(dt);cam(dt);document.querySelector("#fill").style.width=cars[0].userData.boost+"%";if(remaining<=0){running=false;if(activeTournamentMatch){persistTournamentResult(blue,orange).finally(()=>{activeTournamentMatch=null;});}speakMatch(blue===orange?"Coup de sifflet final ! Match nul, "+blue+" partout. Quelle bataille !":blue>orange?"Coup de sifflet final ! "+blueName+" l’emporte "+blue+" à "+orange+". Victoire méritée !":"Coup de sifflet final ! "+orangeName+" l’emporte "+orange+" à "+blue+". Quelle performance !",blue===orange?"Full time! A draw at "+blue+" all. What a battle!":blue>orange?"Full time! "+blueName+" win "+blue+" to "+orange+". A deserved victory!":"Full time! "+orangeName+" win "+orange+" to "+blue+". What a performance!");const verdict=blue>orange?"VICTOIRE !":blue<orange?"DÉFAITE":"MATCH NUL";document.querySelector("#flash").innerHTML=verdict+"<br><small>FIN DU MATCH · "+blue+" — "+orange+"</small>";document.querySelector("#flash").style.display="block";setTimeout(()=>{document.querySelector("#flash").style.display="none";document.querySelector("#menu").style.display="flex";document.querySelector("#score").style.display="none";document.querySelector("#boost").style.display="none";document.querySelector("#help").style.display="none";document.querySelector("#pauseBtn").style.display="none";document.querySelector("#pauseMenu").style.display="none";paused=false},2200)}}renderer.render(scene,camera)}
+function loop(){requestAnimationFrame(loop);refreshMobileUI();const dt=Math.min(clock.getDelta(),.033);if(running&&!paused){remaining-=dt;commentaryVoice(dt);document.querySelector("#timer").textContent=fmt(remaining);cars.forEach((c,i)=>i?ai(c,dt):human(c,dt));ballPhysics(dt);collisions(dt);cam(dt);document.querySelector("#fill").style.width=cars[0].userData.boost+"%";if(remaining<=0){running=false;if(activeTournamentMatch){if(blue===orange){startTournamentShootout();}else{persistTournamentResult(blue,orange).finally(()=>{activeTournamentMatch=null;});}}speakMatch(blue===orange?"Coup de sifflet final ! Match nul, "+blue+" partout. Quelle bataille !":blue>orange?"Coup de sifflet final ! "+blueName+" l’emporte "+blue+" à "+orange+". Victoire méritée !":"Coup de sifflet final ! "+orangeName+" l’emporte "+orange+" à "+blue+". Quelle performance !",blue===orange?"Full time! A draw at "+blue+" all. What a battle!":blue>orange?"Full time! "+blueName+" win "+blue+" to "+orange+". A deserved victory!":"Full time! "+orangeName+" win "+orange+" to "+blue+". What a performance!");const verdict=blue>orange?"VICTOIRE !":blue<orange?"DÉFAITE":"MATCH NUL";document.querySelector("#flash").innerHTML=verdict+"<br><small>FIN DU MATCH · "+blue+" — "+orange+"</small>";document.querySelector("#flash").style.display="block";setTimeout(()=>{document.querySelector("#flash").style.display="none";document.querySelector("#menu").style.display="flex";document.querySelector("#score").style.display="none";document.querySelector("#boost").style.display="none";document.querySelector("#help").style.display="none";document.querySelector("#pauseBtn").style.display="none";document.querySelector("#pauseMenu").style.display="none";paused=false},2200)}}renderer.render(scene,camera)}
 function applySky(){
  if(!scene)return;
  const sky={night:{bg:0x050914,fog:0x050914},sunset:{bg:0x3b1837,fog:0x3b1837},day:{bg:0x73b8e8,fog:0x73b8e8}}[skyType]||{bg:0x050914,fog:0x050914};
@@ -907,18 +908,55 @@ document.querySelector("#loadNextTournamentMatch").addEventListener("click",asyn
  }catch(e){status.textContent="Impossible de charger le match : "+(e.message||"erreur");status.style.color="#ff9b9b";}
  finally{btn.disabled=false;}
 });
-async function persistTournamentResult(homeScore,awayScore){
+
+let shootout=null;
+function startTournamentShootout(){
+ shootout={home:0,away:0,kick:0,homeTaken:0,awayTaken:0,history:[]};
+ const panel=document.querySelector("#shootoutPanel");panel.style.display="flex";
+ document.querySelector("#shootoutFeedback").textContent="";
+ updateShootoutUI();
+}
+function updateShootoutUI(){
+ const s=shootout;if(!s)return;
+ document.querySelector("#shootoutScore").textContent=s.home+" — "+s.away;
+ const homeTurn=s.kick%2===0;
+ document.querySelector("#shootoutInfo").textContent=(homeTurn?document.querySelector("#blueTeamName").value:document.querySelector("#orangeTeamName").value)+" tire · tentative "+(Math.floor(s.kick/2)+1);
+}
+function chooseShootoutDirection(direction){
+ const s=shootout;if(!s)return;
+ const homeTurn=s.kick%2===0;
+ const keeper=["left","center","right"][Math.floor(Math.random()*3)];
+ const scored=direction!==keeper;
+ if(homeTurn){s.homeTaken++;if(scored)s.home++;}else{s.awayTaken++;if(scored)s.away++;}
+ document.querySelector("#shootoutFeedback").textContent=scored?"BUT ! Le gardien plonge du mauvais côté.":"ARRÊT ! Le gardien a choisi le bon côté.";
+ s.history.push({homeTurn,scored});
+ s.kick++;
+ const finished=s.homeTaken>=5&&s.awayTaken>=5&&s.home!==s.away&&s.homeTaken===s.awayTaken;
+ const suddenDeath=s.kick>=10&&s.homeTaken===s.awayTaken&&s.home!==s.away;
+ if(finished||suddenDeath){
+  const winnerId=s.home>s.away?activeTournamentMatch.home_team_id:activeTournamentMatch.away_team_id;
+  document.querySelector("#shootoutInfo").textContent="Séance terminée ! "+(s.home>s.away?document.querySelector("#blueTeamName").value:document.querySelector("#orangeTeamName").value)+" remporte la séance.";
+  document.querySelectorAll(".shootoutChoice").forEach(b=>b.disabled=true);
+  document.querySelector("#shootoutFeedback").textContent="Qualification du vainqueur en cours…";
+  persistTournamentResult(blue,orange,winnerId).finally(()=>{activeTournamentMatch=null;});
+  setTimeout(()=>{document.querySelector("#shootoutPanel").style.display="none";document.querySelectorAll(".shootoutChoice").forEach(b=>b.disabled=false);shootout=null;document.querySelector("#menu").style.display="flex";},2600);
+  return;
+ }
+ updateShootoutUI();
+}
+document.querySelectorAll(".shootoutChoice").forEach(b=>b.addEventListener("click",()=>chooseShootoutDirection(b.dataset.shot)));
+async function persistTournamentResult(homeScore,awayScore,shootoutWinnerId=null){
  const match=activeTournamentMatch,tournamentId=activeTournamentId;
  const status=document.querySelector("#tournamentStatus");
  if(!match||!tournamentId||!activeUser){status.textContent="Enregistrement annulé : match, tournoi ou session utilisateur manquant. Reconnecte-toi et recharge le match.";status.style.color="#ff9b9b";return;}
  try{
-  const winnerId=homeScore===awayScore?null:(homeScore>awayScore?match.home_team_id:match.away_team_id);
+  const winnerId=shootoutWinnerId||(homeScore===awayScore?null:(homeScore>awayScore?match.home_team_id:match.away_team_id));
   status.textContent="Enregistrement du score "+homeScore+"–"+awayScore+"…";status.style.color="#ffd28a";
   const {data:savedMatch,error:scoreError}=await supabase.from("nc_tournament_matches").update({home_score:homeScore,away_score:awayScore,status:"completed",played_at:new Date().toISOString()}).eq("id",match.id).eq("tournament_id",tournamentId).select("id,home_score,away_score,status").maybeSingle();
   if(scoreError)throw scoreError;
   if(!savedMatch)throw new Error("Aucune ligne modifiée. Vérifie que tu es connecté avec le compte propriétaire du tournoi et que les règles RLS Supabase autorisent la modification.");
   const {data:allMatches,error:allError}=await supabase.from("nc_tournament_matches").select("id,round_number,match_number,stage,home_team_id,away_team_id,status").eq("tournament_id",tournamentId).order("round_number").order("match_number");if(allError)throw allError;
-  if(!winnerId){status.textContent="Score enregistré : "+homeScore+"–"+awayScore+". Égalité en élimination directe : aucun vainqueur n’est qualifié. Une séance de tirs au but sera nécessaire.";status.style.color="#ffd28a";await refreshSavedTournaments();await displaySavedTournamentBracket();return;}
+  if(!winnerId){status.textContent="Score enregistré : "+homeScore+"–"+awayScore+". Égalité : séance de tirs au but nécessaire.";status.style.color="#ffd28a";await refreshSavedTournaments();await displaySavedTournamentBracket();return;}
   const next=allMatches.find(m=>m.status==="scheduled"&&m.round_number===match.round_number+1&&(!m.home_team_id||!m.away_team_id));
   if(next){
    const field=!next.home_team_id?"home_team_id":"away_team_id";
